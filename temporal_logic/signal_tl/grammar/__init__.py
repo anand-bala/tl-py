@@ -1,3 +1,6 @@
+from .temporal_ops import Always, Until, Eventually, TemporalOp
+from .basic_ops import Not, And, Or, Implies, LogicOp
+from .atoms import TLTrue, TLFalse, true, false, Atom, Predicate
 """
 This subpackage defines the grammar for STL.
 
@@ -40,7 +43,8 @@ def as_Expression(arg):
             return sym_2_expression[type(arg).__name__](*arg.args)
         if isinstance(arg, (sympy.Ge, sympy.Gt, sympy.Le, sympy.Lt)):
             return atoms.Predicate(arg)
-    raise TypeError('Incompatible argument type: %s', arg.__module__ + "." + arg.__class__.__qualname__)
+    raise TypeError('Incompatible argument type: %s',
+                    arg.__module__ + "." + arg.__class__.__qualname__)
 
 
 class Expression(ABC):
@@ -164,10 +168,6 @@ class Expression(ABC):
     def tex_print(self):
         pass
 
-
-from .atoms import TLTrue, TLFalse, true, false, Atom, Predicate
-from .basic_ops import Not, And, Or, Implies, LogicOp
-from .temporal_ops import Always, Until, Eventually, TemporalOp
 
 __all__ = [
     'Expression', 'Atom', 'Predicate',

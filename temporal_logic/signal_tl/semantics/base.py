@@ -11,5 +11,3 @@ class BaseMonitor(ABC):
     @abstractmethod
     def horizon(self):
         pass
-
-

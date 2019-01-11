@@ -11,8 +11,11 @@ from .base import BaseMonitor
 BOTTOM = -np.inf
 TOP = np.inf
 
-TOP_FN = lambda _: np.inf
-BOTTOM_FN = lambda _: -np.inf
+
+def TOP_FN(_): return np.inf
+
+
+def BOTTOM_FN(_): return -np.inf
 
 
 def _get_atom_fn(inputs, expr):
@@ -22,7 +25,8 @@ def _get_atom_fn(inputs, expr):
         return BOTTOM_FN
     if isinstance(expr, signal_tl.Predicate):
         return sympy.lambdify(inputs, expr.expr)
-    raise TypeError('Invalid input type: must be of type signal_tl.Atom, got {}'.format(type(expr)))
+    raise TypeError(
+        'Invalid input type: must be of type signal_tl.Atom, got {}'.format(type(expr)))
 
 
 class EfficientRobustnessMonitor(BaseMonitor):
@@ -43,7 +47,8 @@ class EfficientRobustnessMonitor(BaseMonitor):
         self._reset()
 
     def _reset(self):
-        self.atom_functions = dict(zip(self._atoms, [BOTTOM_FN] * len(self._atoms)))
+        self.atom_functions = dict(
+            zip(self._atoms, [BOTTOM_FN] * len(self._atoms)))
         self.atom_signals = dict(zip(self._atoms, [None] * len(self._atoms)))
 
     @property
@@ -115,7 +120,8 @@ class EfficientRobustnessMonitor(BaseMonitor):
             return self.compute_not(self.robustness_signal(phi.args[0], w))
 
         if isinstance(phi, (signal_tl.And, signal_tl.Or)):
-            y_signals = np.transpose(np.array([self.robustness_signal(arg, w) for arg in phi.args]))
+            y_signals = np.transpose(
+                np.array([self.robustness_signal(arg, w) for arg in phi.args]))
             if isinstance(phi, signal_tl.And):
                 return self.compute_and(y_signals)
             if isinstance(phi, signal_tl.Or):
@@ -205,7 +211,8 @@ class EfficientRobustnessMonitor(BaseMonitor):
                 return self._compute_unbounded_until(x, y)
             else:
                 yalw1 = self._compute_bounded_globally(x, a)
-                ytmp = shift(self._compute_unbounded_until(x, y), -a, mode='nearest')
+                ytmp = shift(self._compute_unbounded_until(
+                    x, y), -a, mode='nearest')
                 return self.compute_and_binary(yalw1, ytmp)
         else:
             z2 = self._compute_bounded_eventually(y, b - a)

@@ -16,8 +16,11 @@ from temporal_rl import temporal_logic as stl
 BOTTOM = -np.inf
 TOP = np.inf
 
-TOP_FN = lambda _: np.inf
-BOTTOM_FN = lambda _: -np.inf
+
+def TOP_FN(_): return np.inf
+
+
+def BOTTOM_FN(_): return -np.inf
 
 
 def _get_atom_fn(inputs, expr):
@@ -27,7 +30,8 @@ def _get_atom_fn(inputs, expr):
         return BOTTOM_FN
     if isinstance(expr, stl.Predicate):
         return sympy.lambdify(inputs, expr.expr)
-    raise TypeError('Invalid input type: must be of type signal_tl.Atom, got {}'.format(type(expr)))
+    raise TypeError(
+        'Invalid input type: must be of type signal_tl.Atom, got {}'.format(type(expr)))
 
 
 def minkowski_sum(i1, i2):
@@ -102,7 +106,8 @@ class OnlineRobustness:
         if isinstance(phi, stl.And):
             for arg in phi.args:
                 self.update_worklist(arg, t, x)
-            self.worklist[phi] = np.maximum.reduce([self.worklist[arg] for arg in phi.args])
+            self.worklist[phi] = np.maximum.reduce(
+                [self.worklist[arg] for arg in phi.args])
             return
         if isinstance(phi, stl.Always):
             self.update_worklist(phi.args[0], t, x)

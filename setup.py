@@ -13,8 +13,6 @@ VERSION = '0.1.0'
 REQUIRED_PKGS = [
     "numpy",
     "scipy",
-    "cython",
-    "torch",
     "sympy",
 ]
 
@@ -35,7 +33,7 @@ setup(
     author_email=EMAIL,
     python_requires=REQUIRES_PYTHON,
     url=URL,
-    packages=find_packages(exclude=('tests', 'scripts', 'experiments',)),
+    packages=find_packages(exclude=('tests', 'examples',)),
 
     install_requires=REQUIRED_PKGS,
     extras_require=EXTRAS,

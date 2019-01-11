@@ -1,7 +1,6 @@
 """The STL package
 
 This package defines STL grammar and semantics.
-The signal_tl.functional subpackage also defines a few algorithms to monitor/model-check against a STL spec.
 """
 
 import sympy

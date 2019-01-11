@@ -95,7 +95,8 @@ class FilteringMonitor(BaseMonitor):
         self._reset()
 
     def _reset(self):
-        self.atom_functions = dict(zip(self._atoms, [BOTTOM] * len(self._atoms)))
+        self.atom_functions = dict(
+            zip(self._atoms, [BOTTOM] * len(self._atoms)))
         self.atom_signals = dict(zip(self._atoms, [None] * len(self._atoms)))
         self.node_robustness_signals = dict()
 
@@ -136,7 +137,8 @@ class FilteringMonitor(BaseMonitor):
         if w.ndim == 1:
             w = np.reshape(w, (len(w), 1))
         if len(self.signals) != w.shape[1]:
-            raise ValueError('Expected shape of w to be (n_samples, n_states, ...), got {}'.format(w.shape))
+            raise ValueError(
+                'Expected shape of w to be (n_samples, n_states, ...), got {}'.format(w.shape))
         if not t:
             t = np.arange(w.shape[0])
 
@@ -173,7 +175,8 @@ class FilteringMonitor(BaseMonitor):
         if isinstance(phi, signal_tl.Not):
             return 1 - self._robustness_signal(phi.args[0], w)
         if isinstance(phi, (signal_tl.And, signal_tl.Or)):
-            y_signals = np.transpose(np.array([self._robustness_signal(arg, w) for arg in phi.args]))
+            y_signals = np.transpose(
+                np.array([self._robustness_signal(arg, w) for arg in phi.args]))
             if isinstance(phi, signal_tl.And):
                 z = _compute_and(y_signals)
                 self.node_robustness_signals[phi] = z
