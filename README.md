@@ -16,5 +16,5 @@ To do this, I heavily use [SymPy](https://www.sympy.org/en/index.html) and borro
 Using `pip`:
 
 ```
-pip install git+https://github.com/anand-bala/tl-py#egg=temporal_logic
+pip install git+https://github.com/anand-bala/tl-py@v0.1.0#egg=temporal_logic
 ```
