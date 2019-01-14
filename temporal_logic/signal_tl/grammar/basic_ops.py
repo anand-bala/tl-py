@@ -1,4 +1,4 @@
-from . import Expression, as_Expression
+from .expression import Expression, as_Expression
 
 
 class LogicOp(Expression):

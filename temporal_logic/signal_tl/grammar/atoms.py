@@ -4,7 +4,7 @@ import sympy
 from sympy import sympify
 from sympy.core.relational import Le, Lt, Ge, Gt
 
-from . import Expression
+from .expression import Expression
 
 
 class Atom(Expression):

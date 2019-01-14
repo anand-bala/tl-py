@@ -11,7 +11,7 @@ Online monitoring of robustness as defined in [1].
 import sympy
 import numpy as np
 
-from temporal_rl import temporal_logic as stl
+import temporal_logic.signal_tl as stl
 
 BOTTOM = -np.inf
 TOP = np.inf

@@ -13,7 +13,7 @@ from scipy.interpolate import interp1d
 from scipy.ndimage import shift
 from scipy.ndimage.filters import minimum_filter1d
 
-from temporal_rl.temporal_logic import signal_tl
+from temporal_logic import signal_tl
 
 from .base import BaseMonitor
 
