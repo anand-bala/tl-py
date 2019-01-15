@@ -14,6 +14,8 @@ from scipy.ndimage import shift
 from scipy.ndimage.filters import minimum_filter1d
 
 from temporal_logic import signal_tl
+from temporal_logic.signal_tl import as_Expression
+
 
 from .base import BaseMonitor
 
@@ -87,7 +89,7 @@ class FilteringMonitor(BaseMonitor):
         :param window: Convolution window to use. Provide the first argument for function in
                        https://docs.scipy.org/doc/scipy/reference/generated/scipy.signal.windows.get_window.html#scipy.signal.windows.get_window
         """
-        self._spec = spec
+        self._spec = as_Expression(spec)
         self._signals = signals
         self._window_fn = window
 

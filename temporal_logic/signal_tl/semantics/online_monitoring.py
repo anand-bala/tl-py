@@ -12,6 +12,7 @@ import sympy
 import numpy as np
 
 import temporal_logic.signal_tl as stl
+from temporal_logic.signal_tl import as_Expression
 
 BOTTOM = -np.inf
 TOP = np.inf
@@ -44,7 +45,7 @@ class OnlineRobustness:
 
     def __init__(self, signals, spec):
         self._signals = signals
-        self._spec = spec
+        self._spec = as_Expression(spec)
 
         self._reset()
 
