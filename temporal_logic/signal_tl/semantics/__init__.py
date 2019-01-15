@@ -12,4 +12,4 @@ def check_sat(phi, signals, trace, t=None, dt=np.inf):
     """
 
     monitor = EfficientRobustnessMonitor(phi, signals)
-    return monitor(trace, t, dt)
+    return monitor(trace, t, dt)[0] >= 0
