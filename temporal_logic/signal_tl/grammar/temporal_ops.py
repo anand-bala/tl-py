@@ -55,7 +55,7 @@ class Always(TemporalOp):
         arg_tex = self.args[0].tex_print()
         a, b = self.interval
         if math.isinf(b):
-            return r'$G({})$'.format(arg_tex)
+            return r'G({})'.format(arg_tex)
 
         return r' G_{{ [{a}, {b}] }} ( {phi} ) '.format(a=a, b=b, phi=arg_tex)
 
@@ -68,6 +68,6 @@ class Eventually(TemporalOp):
         arg_tex = self.args[0].tex_print()
         a, b = self.interval
         if math.isinf(b):
-            return r'$F({})$'.format(arg_tex)
+            return r'F({})'.format(arg_tex)
 
         return r' F_{{ [{a}, {b}] }} ( {phi} ) '.format(a=a, b=b, phi=arg_tex)
