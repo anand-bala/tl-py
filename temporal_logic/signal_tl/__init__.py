@@ -5,12 +5,12 @@ This package defines STL grammar and semantics.
 
 import sympy
 
-from .grammar.expression import Expression
+from .grammar.expression import Expression, as_Expression
 from .grammar.atoms import Atom, TLFalse, TLTrue, true, false, Predicate
 from .grammar.basic_ops import And, Or, Not, Implies
 from .grammar.temporal_ops import Eventually, Always, Until
 
-from . import semantics as monitors
+# from . import semantics as monitors
 
 from collections import deque
 
