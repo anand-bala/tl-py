@@ -14,6 +14,7 @@ from scipy.ndimage import shift
 from scipy.ndimage.filters import minimum_filter1d
 
 from temporal_logic import signal_tl
+from temporal_logic.signal_tl.grammar.temporal_ops import TemporalOp
 
 from .base import BaseMonitor
 
@@ -28,7 +29,7 @@ def get_spec_interval(spec: signal_tl.Expression):
     :return:
     """
     root = spec
-    if isinstance(root, signal_tl.grammar.TemporalOp):
+    if isinstance(root, TemporalOp):
         a, b = root.interval
         interval_width = abs(b - a) + 1
         return interval_width

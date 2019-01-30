@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 NAME = "temporal_logic"
 DESCRIPTION = ""
-URL = ""
+URL = "https://github.com/anand-bala/tl-py.git"
 EMAIL = "anandbal@usc.edu"
 AUTHOR = "Anand Balakrishnan"
 
