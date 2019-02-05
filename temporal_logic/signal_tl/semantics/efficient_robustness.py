@@ -79,7 +79,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
         if len(self.signals) != w.shape[1]:
             raise ValueError('Expected shape of w to be (n_samples, {}, ...), got {}'
                              .format(len(self.signals), w.shape))
-        if not t:
+        if t is None:
             t = np.arange(w.shape[0])
 
         orig_t = t
