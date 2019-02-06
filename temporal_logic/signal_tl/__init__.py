@@ -3,20 +3,19 @@
 This package defines STL grammar and semantics.
 """
 
-import sympy
+from collections import deque
+from typing import Tuple, Union
 
-from .grammar.expression import Expression, as_Expression
-from .grammar.atoms import Atom, TLFalse, TLTrue, true, false, Predicate
-from .grammar.basic_ops import And, Or, Not, Implies
-from .grammar.temporal_ops import Eventually, Always, Until
+from sympy import symbols
+from .core.atoms import Atom, TLFalse, TLTrue, true, false, Predicate
+from .core.base import Expression, Signal, Parameter
+from .core.basic_ops import And, Or, Not, Implies
+from .core.temporal_ops import Eventually, Always, Until, Releases
 
 # from . import semantics as monitors
 
-from collections import deque
-
-from typing import Tuple, Union
-
 U = Until
+R = Releases
 
 G = Always
 Globally = Always
@@ -27,10 +26,23 @@ Finally = Eventually
 Ev = Eventually
 
 
-def signals(sig):
-    if isinstance(sig, (tuple, list)):
-        sig = ' '.join(sig)
-    return sympy.symbols(sig)
+def signals(names):
+    """
+    Declare a bunch of signals. see: :func:`sympy.symbols` for more info on how to use
+    :param names: List of signal names
+    :return: tuple of signal variables
+    :rtype: Tuple[Signal]
+    """
+    return symbols(names, cls=Signal)
+
+
+def params(names):
+    """
+    Declare a bunch of parameters in the STL formula
+    :param names: List of parameter names
+    :return: Tuple[Parameter]
+    """
+    return symbols(names, cls=Parameter)
 
 
 def preorder_iterator(expr: Expression):

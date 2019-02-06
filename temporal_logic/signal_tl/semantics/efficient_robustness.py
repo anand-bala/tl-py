@@ -5,7 +5,7 @@ from scipy.ndimage import shift
 from scipy.ndimage.filters import maximum_filter1d, minimum_filter1d
 
 from temporal_logic import signal_tl
-from temporal_logic.signal_tl import as_Expression
+from temporal_logic.signal_tl import Expression
 
 from .base import BaseMonitor
 
@@ -42,7 +42,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
         :param spec: STL specification to monitor
         :param signals: List of signal parameters. This must match the symbols used in the predicates
         """
-        self._spec = as_Expression(spec)
+        self._spec = Expression.convert(spec)
         self._signals = signals
         self._atoms = frozenset(signal_tl.get_atoms(spec))
         self._reset()

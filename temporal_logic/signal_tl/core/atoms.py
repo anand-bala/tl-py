@@ -4,7 +4,7 @@ import sympy
 from sympy import sympify
 from sympy.core.relational import Le, Lt, Ge, Gt
 
-from .expression import Expression
+from temporal_logic.signal_tl.core.base import Expression
 
 
 class Atom(Expression):
@@ -14,10 +14,6 @@ class Atom(Expression):
     @abstractmethod
     def eval(self, *args):
         pass
-
-    @classmethod
-    def _filter_args(cls, *args):
-        return ()
 
 
 class TLTrue(Atom):
@@ -35,7 +31,7 @@ class TLTrue(Atom):
     def __hash__(self):
         return hash(True)
 
-    def tex_print(self):
+    def _latex(self):
         return r' \top '
 
 
@@ -54,7 +50,7 @@ class TLFalse(Atom):
     def __hash__(self):
         return hash(False)
 
-    def tex_print(self):
+    def _latex(self):
         return r' \bot '
 
 
@@ -63,7 +59,7 @@ false = TLFalse()
 
 
 class Predicate(Atom):
-    """A signal predicate in the form of :math:`f(x_i) \geq 0`
+    r"""A signal predicate in the form of :math:`f(x_i) \geq 0`
 
     Define a predicate on a signal in the form of :math:`f(x_i) \geq 0`.
     Here,
@@ -112,11 +108,11 @@ class Predicate(Atom):
         fn = sympy.lambdify(signals, self.expr)
         return fn(*x)
 
-    def tex_print(self):
+    def _latex(self):
         return sympy.latex(self.predicate)
 
 
 __all__ = [
-    'TLFalse', 'TLTrue', true, false,
+    'TLFalse', 'TLTrue', 'true', 'false',
     'Predicate'
 ]

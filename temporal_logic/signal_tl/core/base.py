@@ -3,31 +3,28 @@ from abc import ABC, abstractmethod
 
 import sympy
 
+import temporal_logic.signal_tl as stl
 
-def as_Expression(arg):
-    """Convert given arg to Expression"""
 
-    from . import atoms
-    from . import basic_ops
+class Signal(sympy.Symbol):
+    def _noop(self, other=None):
+        raise TypeError('BooleanAtom not allowed in this context.')
 
-    sym_2_expression = {
-        'And': basic_ops.And,
-        'Or': basic_ops.Or,
-        'Not': basic_ops.Not,
-        'Implies': basic_ops.Implies,
-    }
+    def __ge__(self, other):
+        return stl.Predicate(self >= other)
 
-    if isinstance(arg, atoms.Expression):
-        return arg
-    if isinstance(arg, (bool, sympy.boolalg.BooleanAtom)):
-        return atoms.true if arg else atoms.false
-    if isinstance(arg, (sympy.Expr, sympy.boolalg.Boolean)):
-        if isinstance(arg, (sympy.And, sympy.Or, sympy.Not, sympy.Implies)):
-            return sym_2_expression[type(arg).__name__](*arg.args)
-        if isinstance(arg, (sympy.Ge, sympy.Gt, sympy.Le, sympy.Lt)):
-            return atoms.Predicate(arg)
-    raise TypeError('Incompatible argument type: %s',
-                    arg.__module__ + "." + arg.__class__.__qualname__)
+    def __gt__(self, other):
+        return stl.Predicate(self > other)
+
+    def __le__(self, other):
+        return stl.Predicate(self <= other)
+
+    def __lt__(self, other):
+        return stl.Predicate(self < other)
+
+
+class Parameter(sympy.Symbol):
+    pass
 
 
 class Expression(ABC):
@@ -44,10 +41,7 @@ class Expression(ABC):
 
     nargs = 0
 
-    @classmethod
-    @abstractmethod
-    def _filter_args(cls, *args) -> tuple:
-        pass
+    _params = []
 
     def __new__(cls, *args, **kwargs):
 
@@ -60,11 +54,43 @@ class Expression(ABC):
         obj = object.__new__(cls)
         obj._args = obj._filter_args(*args)
         for a in obj._args:
-            a.parent = obj
+            a._parent = obj
         obj._mhash = None
         obj._depth = obj._calc_depth()
+        obj._size = obj._calc_size()
         obj._parent = None
         return obj
+
+    @classmethod
+    def convert(cls, other):
+        from . import atoms
+        from . import basic_ops
+
+        sym_2_expression = {
+            'And': basic_ops.And,
+            'Or': basic_ops.Or,
+            'Not': basic_ops.Not,
+            'Implies': basic_ops.Implies,
+        }
+
+        if isinstance(other, atoms.Expression):
+            return other
+        if isinstance(other, (bool, sympy.boolalg.BooleanAtom)):
+            return atoms.true if other else atoms.false
+        if isinstance(other, (sympy.And, sympy.Or, sympy.Not, sympy.Implies)):
+            return sym_2_expression[type(other).__name__](*other.args)
+        if isinstance(other, (sympy.Ge, sympy.Gt, sympy.Le, sympy.Lt)):
+            return atoms.Predicate(other)
+        raise TypeError('Incompatible argument type: %s',
+                        other.__module__ + "." + other.__class__.__qualname__)
+
+    @classmethod
+    def _filter_args(cls, *args) -> tuple:
+        return tuple(map(cls.convert, args))
+
+    @property
+    def func(self):
+        return self.__class__
 
     @property
     def args(self):
@@ -143,16 +169,27 @@ class Expression(ABC):
     def _calc_depth(self):
         if self.is_Atom:
             return 0
+        return 1 + max(map(lambda arg: arg.depth, self.args))
+
+    @property
+    def size(self):
+        return self._size
+
+    def _calc_size(self):
+        if self.is_Atom:
+            return 1
         return 1 + sum(map(lambda arg: arg.depth, self.args))
 
     @property
     def parent(self):
         return self._parent
 
-    @parent.setter
-    def parent(self, expr):
-        self._parent = expr
-
     @abstractmethod
-    def tex_print(self):
+    def _latex(self):
         pass
+
+    def to_nnf(self):
+        return self
+
+    def to_cnf(self):
+        return self
