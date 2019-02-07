@@ -7,9 +7,6 @@ import temporal_logic.signal_tl as stl
 
 
 class Signal(sympy.Symbol):
-    def _noop(self, other=None):
-        raise TypeError('BooleanAtom not allowed in this context.')
-
     def __ge__(self, other):
         return stl.Predicate(self >= other)
 

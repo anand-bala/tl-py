@@ -3,7 +3,7 @@ import math
 from sympy import latex
 import sympy
 
-from temporal_logic.signal_tl.core.base import Expression
+from temporal_logic.signal_tl.core.base import Expression, Parameter
 
 
 class Interval:
@@ -12,6 +12,7 @@ class Interval:
         self.b = b
         self._lopen = lopen if not math.isinf(-a) else True
         self._ropen = ropen if not math.isinf(b) else True
+        self.is_parametric = isinstance(a, Parameter) or isinstance(b, Parameter)
 
     @property
     def interval(self):
@@ -31,14 +32,20 @@ class Interval:
 
     @property
     def left_unbounded(self):
+        if self.is_parametric:
+            return False
         return math.isinf(-self.a)
 
     @property
     def right_unbounded(self):
+        if self.is_parametric:
+            return False
         return math.isinf(self.b)
 
     @property
     def unbounded(self):
+        if self.is_parametric:
+            return False
         return self.left_unbounded or self.right_unbounded
 
     @property

@@ -1,10 +1,12 @@
 from abc import abstractmethod
 
+import numpy as np
+import pandas as pd
 import sympy
 from sympy import sympify
-from sympy.core.relational import Le, Lt, Ge, Gt
+from sympy.core.relational import Ge, Gt, Le, Lt
 
-from temporal_logic.signal_tl.core.base import Expression
+from temporal_logic.signal_tl.core.base import Expression, Signal
 
 
 class Atom(Expression):
@@ -69,6 +71,8 @@ class Predicate(Atom):
     """
     _predicate = None
     is_Predicate = True
+    _signals = set()
+    _f = lambda *args: np.empty(0)
 
     def __new__(cls, *args, **kwargs):
         if len(args) != 1:
@@ -76,6 +80,8 @@ class Predicate(Atom):
         predicate = cls._get_predicate(args[0])
         obj = super(Predicate, cls).__new__(cls, *args, **kwargs)
         obj._predicate = predicate
+        obj._signals = set(map(str, predicate.atoms(Signal)))
+        obj._f = sympy.lambdify(obj._signals, obj._predicate.gts, 'numpy')
         return obj
 
     @classmethod
@@ -103,10 +109,42 @@ class Predicate(Atom):
     def predicate(self):
         return self._predicate
 
-    def eval(self, signals, *x):
-        assert (len(signals) == len(x))
-        fn = sympy.lambdify(signals, self.expr)
-        return fn(*x)
+    @property
+    def signals(self):
+        return self._signals  # type: set
+
+    def f(self, trace):
+        """
+        Evaluate the RHS of predicate
+
+        Assumption: 
+            The name of the symbols in this predicate are the same as the name of the columns in the DataFrame.
+            If the trace is a series, the number of signals used in the predicate must be equal to 1
+        """
+        if isinstance(trace, pd.DataFrame):
+            assert self.signals.issubset(
+                trace.columns), 'The signals used in the predicates are not a subset of the column names of the trace'
+            signals = tuple(trace[i].values for i in self.signals)
+            return self._f(*signals)
+
+        elif isinstance(trace, pd.Series):
+            assert len(
+                self.signals) == 1, 'Predicate uses more than 1 symbol, got 1-D trace'
+            signal = trace.values
+            return self._f(signal)
+        else:
+            raise ValueError(
+                'Expected pandas DataFrame or Series, got {}'.format(trace.__qualname__))
+
+    def eval(self, trace):
+        """
+        Evaluate the predicate.
+
+        :returns: Boolean signal
+        """
+        if isinstance(self.predicate, sympy.Ge):
+            return self.f(trace) >= 0
+        return self.f(trace) > 0
 
     def _latex(self):
         return sympy.latex(self.predicate)

@@ -6,7 +6,7 @@ This package defines STL grammar and semantics.
 from collections import deque
 from typing import Tuple, Union
 
-from sympy import symbols
+import sympy
 from .core.atoms import Atom, TLFalse, TLTrue, true, false, Predicate
 from .core.base import Expression, Signal, Parameter
 from .core.basic_ops import And, Or, Not, Implies
@@ -33,7 +33,7 @@ def signals(names):
     :return: tuple of signal variables
     :rtype: Tuple[Signal]
     """
-    return symbols(names, cls=Signal)
+    return sympy.symbols(names, cls=Signal)
 
 
 def params(names):
@@ -42,7 +42,7 @@ def params(names):
     :param names: List of parameter names
     :return: Tuple[Parameter]
     """
-    return symbols(names, cls=Parameter)
+    return sympy.symbols(names, cls=Parameter)
 
 
 def preorder_iterator(expr: Expression):
