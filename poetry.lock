@@ -130,7 +130,7 @@ python-versions = "*"
 version = "2018.9"
 
 [[package]]
-category = "main"
+category = "dev"
 description = "a python refactoring library..."
 name = "rope"
 optional = false
@@ -185,8 +185,8 @@ python-versions = "*"
 version = "1.11.1"
 
 [metadata]
-content-hash = "d4979e811021ba67c7e142c456ef0d1dcdb2f97429c57a121e84015d17dc2aff"
-python-versions = "^3.5"
+content-hash = "f0a5a5a046b8660a4cf878c983ab3ec559577735fca21efbe20b0d5506e6e907"
+python-versions = "^3.6"
 
 [metadata.hashes]
 astroid = ["35b032003d6a863f5dcd7ec11abd5cd5893428beaa31ab164982403bcb311f22", "6a5d668d7dc69110de01cdf7aeec69a679ef486862a0850cc0fd5571505b6b7e"]

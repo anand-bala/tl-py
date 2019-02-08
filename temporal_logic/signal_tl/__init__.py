@@ -10,7 +10,7 @@ import sympy
 from .core.atoms import Atom, TLFalse, TLTrue, true, false, Predicate
 from .core.base import Expression, Signal, Parameter
 from .core.basic_ops import And, Or, Not, Implies
-from .core.temporal_ops import Eventually, Always, Until, Releases
+from .core.temporal_ops import Eventually, Always, Until, Releases, Interval
 
 # from . import semantics as monitors
 

@@ -59,6 +59,10 @@ class Interval:
     def latex(self):
         i = sympy.Interval(self.a, self.b, self.lopen, self.ropen)
         return latex(i)
+    
+    def __iter__(self):
+        yield self.a
+        yield self.b
 
 
 class TemporalOp(Expression):
