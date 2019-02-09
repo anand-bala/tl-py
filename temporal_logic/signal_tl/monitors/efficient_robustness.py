@@ -17,9 +17,70 @@ import temporal_logic.signal_tl as stl
 BOTTOM = -np.inf
 TOP = np.inf
 
+Point = namedtuple('Point', ('value', 'time'))
+Sample = namedtuple('Sample', ('value', 'time', 'derivative'))
+
+
+def efficient_robustness(phi: stl.Expression, w: pd.DataFrame) -> pd.Series:
+    """
+    Compute the robustness of the given trace `w` against a STL property `phi`.
+
+    :param phi: STL property defined on the trace
+    :type phi: stl.Expression
+    :param w: A signal trace of a system. It must be convertible to a Pandas DataFrame where the names of the columns correspond to the signals defined in the STL Expression.
+    :type w: pd.DataFrame
+    :return: The robustness signal for the given trace
+    :rtype: pd.Series
+    """
+    w = pd.DataFrame(w)
+
+    signals = set()
+    for atom in stl.get_atoms(phi):
+        if isinstance(atom, stl.Predicate):
+            signals.update(atom.signals)
+
+    assert signals.issubset(w.columns), 'Signals: {} not subset of Columns:{}'.format(signals, w.columns)
+
+    if isinstance(phi, stl.Atom):
+        if isinstance(phi, stl.TLTrue):
+            return pd.Series(TOP, index=w.index)
+        if isinstance(phi, stl.TLFalse):
+            return pd.Series(BOTTOM, index=w.index)
+        if isinstance(phi, stl.Predicate):
+            return phi.f(w)
+
+    # Unary ops
+    elif isinstance(phi, (stl.Not, stl.Eventually, stl.Always)):
+        y = efficient_robustness(phi.args[0], w)
+        if isinstance(phi, stl.Not):
+            return compute_not(y)
+        if isinstance(phi, stl.Eventually):
+            return compute_eventually(y, phi.interval)
+        if isinstance(phi, stl.Always):
+            return compute_globally(y, phi.interval)
+
+    # Binary ops
+    elif isinstance(phi, stl.Until):
+        y1 = efficient_robustness(phi.args[0], w)
+        y2 = efficient_robustness(phi.args[1], w)
+        return compute_until(y1, y2, phi.interval)
+
+    # N-ary ops
+    elif isinstance(phi, (stl.Or, stl.And)):
+        y_signals = pd.concat(
+            [efficient_robustness(op, w) for op in phi.args],
+            axis=1,
+        )  # Create a dataframe of signals
+        if isinstance(phi, stl.Or):
+            return compute_or(y_signals)
+        if isinstance(phi, stl.And):
+            return compute_and(y_signals)
+    else:
+        raise ValueError('phi ({}) is not a supported STL operation'.format(phi.func))
+
 
 def compute_not(y: pd.Series) -> pd.Series:
-    return -1 * y
+    return -y
 
 
 def compute_or(y_signals: pd.DataFrame) -> pd.Series:
@@ -38,7 +99,7 @@ def compute_and_binary(x: pd.Series, y: pd.Series) -> pd.Series:
     return pd.concat([x, y], axis=1).min(axis=1)
 
 
-def compute_eventually(signal: pd.Series, interval: stl.Interval) -> pd.Series:
+def compute_eventually(signal: pd.Series, interval: stl.Interval = stl.Interval(0, np.inf)) -> pd.Series:
     a, b = interval
 
     if a > 0:
@@ -61,29 +122,94 @@ def compute_eventually(signal: pd.Series, interval: stl.Interval) -> pd.Series:
     elif b - a >= signal.index[-1] - signal.index[0]:
         return unbounded(signal)
     else:
-        return bounded(signal, b-a)
+        return bounded(signal, b - a)
 
 
-def compute_globally(y: pd.Series, interval: stl.Interval) -> pd.Series:
-    return -1 * compute_eventually(-1 * y, interval)
+def compute_globally(y: pd.Series, interval: stl.Interval = stl.Interval(0, np.inf)) -> pd.Series:
+    return -compute_eventually(-y, interval)
 
 
-def compute_until(signal: pd.Series, interval: stl.Interval) -> pd.Series:
+def compute_until(signal1: pd.Series, signal2: pd.Series, interval: stl.Interval) -> pd.Series:
 
-    def _bounded_globally(x: pd.Series, window):
+
+    def _unbounded(x: pd.Series, y: pd.Series):
+        z_max = BOTTOM
+        z = pd.Series(index=x.index.intersection(y))
+
+        x[x.idxmax() + 1] = x.iloc[-1]
+        y[y.idxmax() + 1] = x.iloc[-1]
+        tx = x.index
+        ty = y.index
+        t =
+        # i = x iterator
+        # j = y iterator
+        # s = z begin, t = z end
+
+        for i in reversed(range(len(x) - 1)):
+            seg =
+            if x[i] >= x[i + 1]:  # dx <= 0
+                z1 = compute_eventually(y[ty[i]: ty[i + 1] + 0.01])
+                z2 = compute_and_binary(z1, x[tx[i]: tx[i + 1] + 0.01])
+                z3 = compute_and_binary(z0, const_x)
+
+    def _timed_until(x: pd.Series, y: pd.Series, interval: stl.Interval) -> pd.Series:
+        z2 = compute_eventually(y, interval)
+        z3 = _unbounded(x, y)
+        z4 = compute_and_binary(z2, z3)
+
+        a, b = interval
+        if a > 0:
+            z1 = _bounded_globally(x, a)
+            z4 -= a
+            return compute_and_binary(
+                z2, z3
+            )
+        else:
+            return compute_and_binary(
+                x, z4
+            )
+
+    def _segment_until(y: pd.Series, x: Sample, t: float, z_max):
+        """
+        For the current sample of x and y[]
+        """
         pass
 
+    def _segment_or(y: pd.Series, sample: Sample, t: float, out: pd.Series):
+        pass
 
-def efficient_robustness(phi: stl.Expression, w: pd.DataFrame):
-    pass
+    def _segment_and(y: pd.Series, sample: Sample, t: float, out: pd.Series):
+        pass
+
+    def _bounded_globally(x: pd.Series, window: int or float):
+        z2 = x.copy()
+        z2.index -= window
+        z3 = compute_and_binary(
+            z2,
+            plateau_maxmin(x, window, 'min')
+        )
+        return compute_and_binary(x, z3)
+
+    a, b = interval
+    if np.isinf(b):
+        if a == 0:
+            return _unbounded(signal1, signal2)
+        else:
+            yalw1 = _bounded_globally(signal1, a)
+            yuntmp = _unbounded(signal1, signal2)
+            yuntmp.index -= a
+            return compute_and_binary(yalw1, yuntmp)
+    else:
+        return _timed_until(signal1, signal2, interval)
 
 
-def plateau_maxmin(x: pd.Series, a: int or float, fn='max') -> np.ndarray:
+
+def plateau_maxmin(x: pd.Series, a: int or float, fn='max') -> pd.Series:
     """
     :param x: 1-D array with data points
     :param a: size of interval (can be float timestamp diff)
+    :param fn: 'max' or 'min'
     """
-    Point = namedtuple('Point', ('value', 'time'))
     M = deque()
 
     # Get local maximums/minimums
@@ -155,3 +281,60 @@ def plateau_maxmin(x: pd.Series, a: int or float, fn='max') -> np.ndarray:
         cont = new_candidate or end_candidate
 
     return z.reindex(x.index)
+
+
+def _compute_partial_eventually(signal: pd.Series, s, t, z: pd.Series = None) -> pd.Series:
+    if z is None:
+        z = pd.Series()
+    continued = False
+    z_max = BOTTOM
+    y = signal.reindex(signal.index.union([s, t])).interpolate('values', limit_direction='both')
+
+    dy = -y.diff(-1).fillna(0)[s:t]  # Compute dy = y_{i+1} - y_i. Pandas does the opposite calculation...
+    y = y[s:t]
+
+    for idx, (t_i, v) in reversed(tuple(enumerate(y.iteritems()))):
+        if dy[t_i] >= 0:
+            if z_max < y[t]:
+                if continued:
+                    z[t] = z_max
+                z_max = y[t]
+            continued = True
+        elif y[t] >= z_max:
+            if continued:
+                z[t] = z_max
+                continued = False
+            z_max = v
+            z[t_i] = v
+        elif z_max >= v:
+            continued = True
+        else:
+            cross_time = t_i + (z_max - v) / dy[t_i]
+            z[cross_time] = z_max
+            z[t_i] = v
+            z_max = v
+            continued = False
+
+        t = t_i
+
+    z.sort_index(inplace=True)
+    return z
+
+def _compute_segment_and(signal1: pd.Series, signal2: pd.Series, begin, end, z: pd.Series = None) -> pd.Series:
+    if z is None:
+        z = pd.Series()
+    continued = False
+
+    y = signal1.reindex(signal1.index.union([begin, end])).interpolate('values', limit_direction='both')
+    y = y[begin:end]
+
+    x = signal2.reindex(signal2.index.union([begin, end])).interpolate('values', limit_direction='both')
+    x = x[begin:end]
+
+    i = Sample(signal2[begin], begin, 0)
+
+    for s, v_y in reversed(tuple(y.iteritems())):
+        if x[t] < y[t]:
+            if x[t_y] > v_y:
+
+
