@@ -1,6 +1,8 @@
 """
 Efficient robust monitoring for STL.
 
+It's mostly a verbatim port of the `robusthom` code from the Breach source. 
+
 [1] A. Donzé, T. Ferrère, and O. Maler, “Efficient Robust Monitoring for STL,”
     in Computer Aided Verification, 2013, pp. 264–279.
 """
@@ -39,7 +41,8 @@ def efficient_robustness(phi: stl.Expression, w: pd.DataFrame) -> pd.Series:
         if isinstance(atom, stl.Predicate):
             signals.update(atom.signals)
 
-    assert signals.issubset(w.columns), 'Signals: {} not subset of Columns:{}'.format(signals, w.columns)
+    assert signals.issubset(
+        w.columns), 'Signals: {} not subset of Columns:{}'.format(signals, w.columns)
 
     if isinstance(phi, stl.Atom):
         if isinstance(phi, stl.TLTrue):
@@ -76,7 +79,8 @@ def efficient_robustness(phi: stl.Expression, w: pd.DataFrame) -> pd.Series:
         if isinstance(phi, stl.And):
             return compute_and(y_signals)
     else:
-        raise ValueError('phi ({}) is not a supported STL operation'.format(phi.func))
+        raise ValueError(
+            'phi ({}) is not a supported STL operation'.format(phi.func))
 
 
 def compute_not(y: pd.Series) -> pd.Series:
@@ -105,24 +109,26 @@ def compute_eventually(signal: pd.Series, interval: stl.Interval = stl.Interval(
     if a > 0:
         signal.index -= a
 
-    def bounded(y: pd.Series, window) -> pd.Series:
-        z2 = y.copy()
-        z2.index -= window
-        z3 = compute_or_binary(
-            z2,
-            plateau_maxmin(y, window, 'max')
-        )
-        return compute_or_binary(y, z3).reindex(y.index)
-
-    def unbounded(y: pd.Series) -> pd.Series:
-        return y.iloc[::-1].expanding(1).max().iloc[::-1]
-
     if b - a == 0:
         return signal
     elif b - a >= signal.index[-1] - signal.index[0]:
-        return unbounded(signal)
+        return _unbounded_eventually(signal)
     else:
-        return bounded(signal, b - a)
+        return _bounded_eventually(signal, b - a)
+
+
+def _bounded_eventually(y: pd.Series, window: float) -> pd.Series:
+    z2 = y.copy()
+    z2.index -= window
+    z3 = compute_or_binary(
+        z2,
+        plateau_maxmin(y, window, 'max')
+    )
+    return compute_or_binary(y, z3).reindex(y.index)
+
+
+def _unbounded_eventually(y: pd.Series, window: float) -> pd.Series:
+    return y.iloc[::-1].expanding(1).max().iloc[::-1]
 
 
 def compute_globally(y: pd.Series, interval: stl.Interval = stl.Interval(0, np.inf)) -> pd.Series:
@@ -130,78 +136,17 @@ def compute_globally(y: pd.Series, interval: stl.Interval = stl.Interval(0, np.i
 
 
 def compute_until(signal1: pd.Series, signal2: pd.Series, interval: stl.Interval) -> pd.Series:
-
-
-    def _unbounded(x: pd.Series, y: pd.Series):
-        z_max = BOTTOM
-        z = pd.Series(index=x.index.intersection(y))
-
-        x[x.idxmax() + 1] = x.iloc[-1]
-        y[y.idxmax() + 1] = x.iloc[-1]
-        tx = x.index
-        ty = y.index
-        t =
-        # i = x iterator
-        # j = y iterator
-        # s = z begin, t = z end
-
-        for i in reversed(range(len(x) - 1)):
-            seg =
-            if x[i] >= x[i + 1]:  # dx <= 0
-                z1 = compute_eventually(y[ty[i]: ty[i + 1] + 0.01])
-                z2 = compute_and_binary(z1, x[tx[i]: tx[i + 1] + 0.01])
-                z3 = compute_and_binary(z0, const_x)
-
-    def _timed_until(x: pd.Series, y: pd.Series, interval: stl.Interval) -> pd.Series:
-        z2 = compute_eventually(y, interval)
-        z3 = _unbounded(x, y)
-        z4 = compute_and_binary(z2, z3)
-
-        a, b = interval
-        if a > 0:
-            z1 = _bounded_globally(x, a)
-            z4 -= a
-            return compute_and_binary(
-                z2, z3
-            )
-        else:
-            return compute_and_binary(
-                x, z4
-            )
-
-    def _segment_until(y: pd.Series, x: Sample, t: float, z_max):
-        """
-        For the current sample of x and y[]
-        """
-        pass
-
-    def _segment_or(y: pd.Series, sample: Sample, t: float, out: pd.Series):
-        pass
-
-    def _segment_and(y: pd.Series, sample: Sample, t: float, out: pd.Series):
-        pass
-
-    def _bounded_globally(x: pd.Series, window: int or float):
-        z2 = x.copy()
-        z2.index -= window
-        z3 = compute_and_binary(
-            z2,
-            plateau_maxmin(x, window, 'min')
-        )
-        return compute_and_binary(x, z3)
-
     a, b = interval
     if np.isinf(b):
         if a == 0:
-            return _unbounded(signal1, signal2)
+            return _unbounded_until(signal1, signal2)
         else:
             yalw1 = _bounded_globally(signal1, a)
-            yuntmp = _unbounded(signal1, signal2)
+            yuntmp = _unbounded_until(signal1, signal2)
             yuntmp.index -= a
             return compute_and_binary(yalw1, yuntmp)
     else:
         return _timed_until(signal1, signal2, interval)
-
 
 
 def plateau_maxmin(x: pd.Series, a: int or float, fn='max') -> pd.Series:
@@ -283,14 +228,122 @@ def plateau_maxmin(x: pd.Series, a: int or float, fn='max') -> pd.Series:
     return z.reindex(x.index)
 
 
-def _compute_partial_eventually(signal: pd.Series, s, t, z: pd.Series = None) -> pd.Series:
-    if z is None:
-        z = pd.Series()
+def _unbounded_until(signal1: pd.Series, signal2: pd.Series):
+    z_max = BOTTOM
+    z = pd.Series()
+
+    s = max(signal1.idxmin, signal2.idxmin)
+    t = min(signal1.idxmax, signal2.idxmax)
+
+    x = signal1[s:t]
+    y = signal2[s:t]
+
+    for tau in reversed(x.index):
+        _segment_until(x, y, tau, t, z_max, z)
+        z_max = z.min()
+        t = tau
+    return z
+
+
+def _timed_until(x: pd.Series, y: pd.Series, interval: stl.Interval) -> pd.Series:
+    a, b = interval
+
+    z2 = _bounded_eventually(y, b-a)
+    z3 = _unbounded_until(x, y)
+    z4 = compute_and_binary(z2, z3)
+    if a > 0:
+        z1 = _bounded_globally(x, a)
+        z4 -= a
+        return compute_and_binary(
+            z1, z4
+        )
+    else:
+        return compute_and_binary(
+            x, z4
+        )
+
+
+def _segment_until(signal1: pd.Series, signal2: pd.Series, s: float, t: float, z_max: float, out: pd.Series = None):
+
+    z = pd.Series()
+    x = signal1.reindex(signal1.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
+    dx = -signal1.diff(-1).fillna(0)
+
+    y = signal2.reindex(signal2.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
+    dy = -signal2.diff(-1).fillna(0)
+
+    if dx[s] <= 0:
+        z1 = _compute_segment_and(x, y, s, t)
+        z2 = _compute_partial_eventually(z1, s, t)
+
+        i = pd.Series()
+        i[s] = min(z_max, x[t])
+        z = _compute_segment_or(i, z2, s, t)
+    else:
+        z1 = _compute_partial_eventually(y, s, t)
+        z2 = _compute_segment_and(x, z1, s, t)
+        z3 = pd.Series()
+        z3[s] = z_max
+        z1 = _compute_segment_and(x, z3, s, t)
+        z = _compute_segment_or(z1, z2, s, t)
+
+    z.sort_index(inplace=True)
+    if out is not None and isinstance(out, pd.Series):
+        out.update(z)
+    return z
+
+
+def _bounded_globally(x: pd.Series, window: int or float):
+    z2 = x.copy()
+    z2.index -= window
+    z3 = compute_and_binary(
+        z2,
+        plateau_maxmin(x, window, 'min')
+    )
+    return compute_and_binary(x, z3)
+
+
+def _partial_or(x: pd.Series, y: pd.Series, s: float, t: float, out: pd.Series = None):
+    z = pd.Series()
+    x = x.reindex(x.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
+    y = y.reindex(y.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
+    for tau in reversed(x.index):
+        _compute_segment_or(x, y, tau, t, z)
+        t = tau
+    z.sort_index(inplace=True)
+    if out is not None and isinstance(out, pd.Series):
+        out.update(z)
+    return z
+
+
+def _partial_and(x: pd.Series, y: pd.Series, s: float, t: float, out: pd.Series = None):
+    z = pd.Series()
+    x = x.reindex(x.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
+    y = y.reindex(y.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
+    for tau in reversed(x.index):
+        _compute_segment_and(x, y, tau, t, z)
+        t = tau
+    z.sort_index(inplace=True)
+    if out is not None and isinstance(out, pd.Series):
+        out.update(z)
+    return z
+
+
+def _compute_partial_eventually(signal: pd.Series, s, t, out: pd.Series = None) -> pd.Series:
+    z = pd.Series()
     continued = False
     z_max = BOTTOM
-    y = signal.reindex(signal.index.union([s, t])).interpolate('values', limit_direction='both')
+    y = signal.reindex(signal.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
 
-    dy = -y.diff(-1).fillna(0)[s:t]  # Compute dy = y_{i+1} - y_i. Pandas does the opposite calculation...
+    # Compute dy = y_{i+1} - y_i. Pandas does the opposite calculation...
+    dy = -y.diff(-1).fillna(0)[s:t]
     y = y[s:t]
 
     for idx, (t_i, v) in reversed(tuple(enumerate(y.iteritems()))):
@@ -318,23 +371,134 @@ def _compute_partial_eventually(signal: pd.Series, s, t, z: pd.Series = None) ->
         t = t_i
 
     z.sort_index(inplace=True)
+    if out is not None and isinstance(out, pd.Series):
+        out.update(z)
     return z
 
-def _compute_segment_and(signal1: pd.Series, signal2: pd.Series, begin, end, z: pd.Series = None) -> pd.Series:
-    if z is None:
-        z = pd.Series()
+
+def _compute_segment_and(signal1: pd.Series, signal2: pd.Series, begin, end, out: pd.Series = None) -> pd.Series:
+    z = pd.Series()
+
     continued = False
 
-    y = signal1.reindex(signal1.index.union([begin, end])).interpolate('values', limit_direction='both')
-    y = y[begin:end]
+    s, t = begin, end
 
-    x = signal2.reindex(signal2.index.union([begin, end])).interpolate('values', limit_direction='both')
-    x = x[begin:end]
+    x = signal1.reindex(signal1.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
+    x = x[s:t]
+    dx = -x.diff(-1).fillna(0)[s:t]
 
-    i = Sample(signal2[begin], begin, 0)
+    y = signal2.reindex(signal2.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
+    y = y[s:t]
+    dy = -y.diff(-1).fillna(0)[s:t]
 
-    for s, v_y in reversed(tuple(y.iteritems())):
+    for tau in reversed(y.index):
         if x[t] < y[t]:
-            if x[t_y] > v_y:
+            if x[tau] > y[tau]:
+                tau_star = time_intersect(
+                    Sample(x[s], s, dx[s]),
+                    Sample(t[tau], tau, dy[tau])
+                )
+                z[tau_star] = x[tau_star]
+                z[tau] = y[tau]
+                continued = False
+            else:
+                continued = True
+        elif x[t] == y[t]:
+            if x[tau] > y[tau]:
+                if continued:
+                    z[t] = x[t]
+                    continued = False
+                z[tau] = y[tau]
+            else:
+                continued = True
+        else:
+            # TODO: This block is suspect
+            if x[tau] < y[tau]:
+                if continued:
+                    z[t] = x[t]
+                tau_star = time_intersect(
+                    Sample(x[s], s, dx[s]),
+                    Sample(y[t], t, dy[t])
+                )
+                z[tau_star] = y[tau_star]
+                continued = True
+            else:
+                if continued:
+                    z[t] = x[t]
+                    continued = False
+                z[tau] = y[tau]
+        t = tau
+    z.sort_index(inplace=True)
+    if out is not None and isinstance(out, pd.Series):
+        out.update(z)
+    return z
 
 
+def _compute_segment_or(signal1: pd.Series, signal2: pd.Series, begin, end, out: pd.Series = None) -> pd.Series:
+    z = pd.Series()
+
+    continued = False
+
+    s, t = begin, end
+
+    x = signal1.reindex(signal1.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
+    x = x[s:t]
+    dx = -x.diff(-1).fillna(0)[s:t]
+
+    y = signal2.reindex(signal2.index.union([s, t])).interpolate(
+        'values', limit_direction='both')
+    y = y[s:t]
+    dy = -y.diff(-1).fillna(0)[s:t]
+
+    for tau in reversed(y.index):
+        if x[t] > y[t]:
+            if x[tau] < y[tau]:
+                tau_star = time_intersect(
+                    Sample(x[s], s, dx[s]),
+                    Sample(t[tau], tau, dy[tau])
+                )
+                z[tau_star] = x[tau_star]
+                z[tau] = y[tau]
+                continued = False
+            else:
+                continued = True
+        elif x[t] == y[t]:
+            if x[tau] < y[tau]:
+                if continued:
+                    z[t] = x[t]
+                    continued = False
+                z[tau] = y[tau]
+            else:
+                continued = True
+        else:
+            # TODO: This block is suspect
+            if x[tau] > y[tau]:
+                if continued:
+                    z[t] = x[t]
+                tau_star = time_intersect(
+                    Sample(x[s], s, dx[s]),
+                    Sample(y[t], t, dy[t])
+                )
+                z[tau_star] = y[tau_star]
+                continued = True
+            else:
+                if continued:
+                    z[t] = x[t]
+                    continued = False
+                z[tau] = y[tau]
+        t = tau
+    z.sort_index(inplace=True)
+
+    if out is not None and isinstance(out, pd.Series):
+        out.update(z)
+    return z
+
+
+def time_intersect(x: Sample, y: Sample):
+    """
+    Intersection of two lines given a point slope form
+    """
+    return (x.value - y.value + (y.derivative * y.time) - (x.derivative * x.time)) / (y.derivative - x.derivative)
