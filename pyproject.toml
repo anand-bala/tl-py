@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "temporal-logic"
-version = "0.1.1"
+version = "0.2.0"
 description = "A Python package for all things Temporal Logic"
 authors = ["Anand Balakrishnan <anandbal@usc.edu>"]
 
