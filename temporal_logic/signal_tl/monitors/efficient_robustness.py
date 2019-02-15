@@ -23,7 +23,7 @@ Point = namedtuple('Point', ('value', 'time'))
 Sample = namedtuple('Sample', ('value', 'time', 'derivative'))
 
 
-def efficient_robustness(phi: stl.Expression, w: pd.DataFrame) -> pd.Series:
+def efficient_robustness(phi: stl.Expression, w: pd.DataFrame, t: list or tuple or np.ndarray = None) -> pd.Series:
     """
     Compute the robustness of the given trace `w` against a STL property `phi`.
 
@@ -31,6 +31,8 @@ def efficient_robustness(phi: stl.Expression, w: pd.DataFrame) -> pd.Series:
     :type phi: stl.Expression
     :param w: A signal trace of a system. It must be convertible to a Pandas DataFrame where the names of the columns correspond to the signals defined in the STL Expression.
     :type w: pd.DataFrame
+    :param t: List of time points to get the robustness from (default: all points in `w`)
+    :type t: list or tuple or np.ndarray
     :return: The robustness signal for the given trace
     :rtype: pd.Series
     """
@@ -44,29 +46,31 @@ def efficient_robustness(phi: stl.Expression, w: pd.DataFrame) -> pd.Series:
     assert signals.issubset(
         w.columns), 'Signals: {} not subset of Columns:{}'.format(signals, w.columns)
 
+    z = pd.Series()
+
     if isinstance(phi, stl.Atom):
         if isinstance(phi, stl.TLTrue):
-            return pd.Series(TOP, index=w.index)
-        if isinstance(phi, stl.TLFalse):
-            return pd.Series(BOTTOM, index=w.index)
-        if isinstance(phi, stl.Predicate):
-            return phi.f(w)
+            z = pd.Series(TOP, index=w.index)
+        elif isinstance(phi, stl.TLFalse):
+            z = pd.Series(BOTTOM, index=w.index)
+        elif isinstance(phi, stl.Predicate):
+            z = phi.f(w)
 
     # Unary ops
     elif isinstance(phi, (stl.Not, stl.Eventually, stl.Always)):
         y = efficient_robustness(phi.args[0], w)
         if isinstance(phi, stl.Not):
-            return compute_not(y)
-        if isinstance(phi, stl.Eventually):
-            return compute_eventually(y, phi.interval)
-        if isinstance(phi, stl.Always):
-            return compute_globally(y, phi.interval)
+            z = compute_not(y)
+        elif isinstance(phi, stl.Eventually):
+            z = compute_eventually(y, phi.interval)
+        elif isinstance(phi, stl.Always):
+            z = compute_globally(y, phi.interval)
 
     # Binary ops
     elif isinstance(phi, stl.Until):
         y1 = efficient_robustness(phi.args[0], w)
         y2 = efficient_robustness(phi.args[1], w)
-        return compute_until(y1, y2, phi.interval)
+        z = compute_until(y1, y2, phi.interval)
 
     # N-ary ops
     elif isinstance(phi, (stl.Or, stl.And)):
@@ -75,12 +79,18 @@ def efficient_robustness(phi: stl.Expression, w: pd.DataFrame) -> pd.Series:
             axis=1,
         )  # Create a dataframe of signals
         if isinstance(phi, stl.Or):
-            return compute_or(y_signals)
-        if isinstance(phi, stl.And):
-            return compute_and(y_signals)
+            z = compute_or(y_signals)
+        elif isinstance(phi, stl.And):
+            z = compute_and(y_signals)
     else:
         raise ValueError(
             'phi ({}) is not a supported STL operation'.format(phi.func))
+    z.sort_index(inplace=True)
+    if t is not None and isinstance(t, (list, tuple, np.ndarray)):
+        z = z.reindex(z.index.union(t)).interpolate(
+            'values', limit_direction='both')
+        return z[t]
+    return z
 
 
 def compute_not(y: pd.Series) -> pd.Series:
@@ -91,8 +101,8 @@ def compute_or(y_signals: pd.DataFrame) -> pd.Series:
     return y_signals.max(axis=1)
 
 
-def compute_or_binary(x: pd.Series, y: pd.Series):
-    return pd.concat([x, y], axis=1).interpolate(limit_area='inside').max(axis=1)
+def compute_or_binary(x: pd.Series, y: pd.Series) -> pd.Series:
+    return pd.concat([x, y], axis=1).interpolate('values', limit_area='inside').max(axis=1)
 
 
 def compute_and(y_signals: pd.DataFrame) -> pd.Series:
@@ -127,7 +137,7 @@ def _bounded_eventually(y: pd.Series, window: float) -> pd.Series:
     return compute_or_binary(y, z3).reindex(y.index)
 
 
-def _unbounded_eventually(y: pd.Series, window: float) -> pd.Series:
+def _unbounded_eventually(y: pd.Series) -> pd.Series:
     return y.iloc[::-1].expanding(1).max().iloc[::-1]
 
 

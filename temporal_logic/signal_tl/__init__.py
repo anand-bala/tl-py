@@ -4,7 +4,7 @@ This package defines STL grammar and semantics.
 """
 
 from collections import deque
-from typing import Tuple, Union
+from typing import Tuple, Union, Iterator
 
 import sympy
 from .core.atoms import Atom, TLFalse, TLTrue, true, false, Predicate
@@ -45,7 +45,7 @@ def params(names):
     return sympy.symbols(names, cls=Parameter)
 
 
-def preorder_iterator(expr: Expression):
+def preorder_iterator(expr: Expression) -> Iterator[Expression]:
     if expr is None:
         return None
 
@@ -56,6 +56,22 @@ def preorder_iterator(expr: Expression):
         yield node
         stack.extend(list(reversed(node.args)))
 
+def postorder_iterator(expr: Expression) -> Iterator[Expression]:
+    # TODO: Single stack implementation?
+    if expr is None:
+        return None
+    stack1 = deque()
+    stack2 = deque()
+
+    root = expr
+    stack1.append(root)
+    while len(stack1) > 0:
+        node = stack1.pop()
+        stack1.extend(list(node.args))
+        stack2.append(node)
+    
+    yield stack2.pop()
+
 
 def get_atoms(expr: Expression) -> Union[Tuple[Atom, ...], None]:
     if expr is None:
@@ -65,6 +81,16 @@ def get_atoms(expr: Expression) -> Union[Tuple[Atom, ...], None]:
         if e.is_Atom:
             atoms.append(e)
     return tuple(atoms)
+
+
+def is_nnf(phi: Expression):
+    if phi is None:
+        return True
+    check = True
+    for expr in preorder_iterator(phi):
+        if isinstance(expr, Not):
+            check = check and isinstance(expr.args[0], Atom)
+    return check
 
 
 __all__ = ['Atom', 'Predicate',

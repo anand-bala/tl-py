@@ -64,6 +64,18 @@ class Interval:
         yield self.a
         yield self.b
 
+    def size(self, discrete=True):
+        if self.unbounded:
+            return math.inf
+        a, b = self.a, self.b
+        if discrete:
+            if self.lopen or self.ropen:
+                return abs(b - a)
+            else:
+                return abs(b - a) + 1
+        else:
+            return abs(b - a)
+
 
 class TemporalOp(Expression):
     is_TemporalOp = True
@@ -104,7 +116,7 @@ class TemporalOp(Expression):
         interval = self._interval
         symbol = self._symbol
         if not interval.unbounded:
-            symbol = r' {}_{ {} }'.format(symbol, interval.latex())
+            symbol = ' {}_{{ {} }}'.format(symbol, interval.latex())
         if self.nargs == 1:
             return r'{} \left( {} \right)'.format(symbol, latex(self.args[0]))
         if self.nargs == 2:

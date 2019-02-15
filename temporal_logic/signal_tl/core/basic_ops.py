@@ -11,7 +11,8 @@ class LogicOp(Expression):
     def _latex(self):
         symbol = self._symbol
         if self.nargs is None:
-            tex_args = tuple(r'\left( {} \right)'.format(latex(arg)) for arg in self.args)
+            tex_args = tuple(r'\left( {} \right)'.format(latex(arg))
+                             for arg in self.args)
             return ' {} '.format(symbol).join(tex_args)
         if self.nargs == 1:
             return r'{} \left( {} \right)'.format(symbol, latex(self.args[0]))
@@ -72,6 +73,17 @@ class Or(LogicOp):
     nargs = None
     _symbol = r'\lor'
 
+    @classmethod
+    def _filter_args(cls, *args) -> tuple:
+        args = super()._filter_args(*args)
+        new_args = []
+        for arg in args:
+            if isinstance(arg, Or):
+                new_args.extend(arg.args)
+            else:
+                new_args.append(arg)
+        return tuple(new_args)
+
 
 class And(LogicOp):
     """The And operator
@@ -80,6 +92,17 @@ class And(LogicOp):
     """
     nargs = None
     _symbol = r'\land'
+
+    @classmethod
+    def _filter_args(cls, *args) -> tuple:
+        args = super()._filter_args(*args)
+        new_args = []
+        for arg in args:
+            if isinstance(arg, And):
+                new_args.extend(arg.args)
+            else:
+                new_args.append(arg)
+        return tuple(new_args)
 
 
 class Implies(LogicOp):
