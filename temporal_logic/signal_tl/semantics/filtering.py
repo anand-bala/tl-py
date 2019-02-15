@@ -30,7 +30,7 @@ def get_spec_interval(spec: signal_tl.Expression):
     :return:
     """
     root = spec
-    if isinstance(root, signal_tl.grammar.TemporalOp):
+    if isinstance(root, (signal_tl.Ev, signal_tl.Alw, signal_tl.U)):
         a, b = root.interval
         interval_width = abs(b - a) + 1
         return interval_width
