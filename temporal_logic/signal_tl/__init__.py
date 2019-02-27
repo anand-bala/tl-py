@@ -26,35 +26,21 @@ F = Eventually
 Finally = Eventually
 Ev = Eventually
 
-class Signal(sympy.Symbol):
-    def __ge__(self, other):
-        return Predicate(self >= other)
-
-    def __gt__(self, other):
-        return Predicate(self > other)
-
-    def __le__(self, other):
-        return Predicate(self <= other)
-
-    def __lt__(self, other):
-        return Predicate(self < other)
-
-
-class Parameter(sympy.Symbol):
-    pass
 
 def signals(sig):
-    return sympy.symbols(sig, cls=Signal)
+    return sympy.symbols(sig)
 
 
 def preorder_iterator(expr: Expression):
-    if isinstance(expr, Expression):
-        stack = deque()
-        stack.append(expr)
-        while len(stack) > 0:
-            node = stack.pop()  # type: Expression
-            yield node
-            stack.extend(list(reversed(node.args)))
+    if expr is None:
+        return None
+
+    stack = deque()
+    stack.append(expr)
+    while len(stack) > 0:
+        node = stack.pop()  # type: Expression
+        yield node
+        stack.extend(list(reversed(node.args)))
 
 
 def get_atoms(expr: Expression) -> Union[Tuple[Atom, ...], None]:
