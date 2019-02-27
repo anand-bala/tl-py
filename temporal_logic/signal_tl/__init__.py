@@ -28,16 +28,16 @@ Ev = Eventually
 
 class Signal(sympy.Symbol):
     def __ge__(self, other):
-        return stl.Predicate(self >= other)
+        return Predicate(self >= other)
 
     def __gt__(self, other):
-        return stl.Predicate(self > other)
+        return Predicate(self > other)
 
     def __le__(self, other):
-        return stl.Predicate(self <= other)
+        return Predicate(self <= other)
 
     def __lt__(self, other):
-        return stl.Predicate(self < other)
+        return Predicate(self < other)
 
 
 class Parameter(sympy.Symbol):
