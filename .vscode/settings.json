@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "/Users/anandbalakrishnan/miniconda/envs/tl/bin/python"
+    "python.pythonPath": "/Users/anandbalakrishnan/miniconda/envs/vrep/bin/python",
+    "python.linting.pylintEnabled": true
 }
