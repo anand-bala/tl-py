@@ -6,7 +6,16 @@ In  this, basic signal filtering is used to define the robust satisfaction degre
 [1] A. Rodionova, E. Bartocci, D. Nickovic, and R. Grosu, “Temporal Logic as Filtering,”
     Proceedings of the 19th International Conference on Hybrid Systems: Computation and Control - HSCC ’16, pp. 11–20, 2016.
 """
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import int
+from future import standard_library
+standard_library.install_aliases()
+
 from collections import deque, namedtuple
+from typing import Union, List, Tuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -20,7 +29,8 @@ BOTTOM = 0
 TOP = 1
 
 
-def lti_filter_monitor(phi: stl.Expression, w: pd.DataFrame, t: list or tuple or np.ndarray = None, dt: float = -1.0,  window: str or tuple or float = 'boxcar'):
+def lti_filter_monitor(phi, w, t=None, dt=-1.0, window='boxcar'):
+    # type: stl.Expression, pd.DataFrame, Optional[Union[List, Tuple, np.ndarray]], Optional[float] -> pd.Series
     """
     Compute the robustness of `w` against STL property `phi` wrt filtering semantics of robustness.
 
@@ -29,7 +39,7 @@ def lti_filter_monitor(phi: stl.Expression, w: pd.DataFrame, t: list or tuple or
     :param w: A signal trace of a system. It must be convertible to a Pandas DataFrame where the names of the columns correspond to the signals defined in the STL Expression.
     :type w: pd.DataFrame
     :param t: List of time points to get the robustness from (default: all points in `w`)
-    :type t: list or tuple or np.ndarray
+    :type t: Optional[Union[List, Tuple, np.ndarray]]
     :param dt: Time delta to resample the trace at, assuming linear interpolation (default: resample with minimum dt in trace)
     :type dt: float
     :param window: First argument to `scipy.signal.get_window` function for filtering
@@ -74,7 +84,7 @@ def lti_filter_monitor(phi: stl.Expression, w: pd.DataFrame, t: list or tuple or
         .interpolate('values', limit_direction='both')
 
 
-def _robustness_signal(phi: stl.Expression, w: pd.DataFrame, dt: float,  window: str or tuple or float) -> pd.Series:
+def _robustness_signal(phi, w, dt,  window):
     z = None
 
     if isinstance(phi, stl.Atom):
@@ -118,41 +128,41 @@ def _robustness_signal(phi: stl.Expression, w: pd.DataFrame, dt: float,  window:
     return z
 
 
-def discrete_to_continuous(interval: stl.Interval, dt: float) -> stl.Interval:
+def discrete_to_continuous(interval, dt):
     a, b = interval
     return stl.Interval(
         a * dt, b * dt,
     )
 
 
-def continuous_to_discrete(interval: stl.Interval, dt: float) -> stl.Interval:
+def continuous_to_discrete(interval, dt):
     a, b = interval
     return stl.Interval(
         a // dt, b // dt,
     )
 
 
-def compute_not(y: pd.Series) -> pd.Series:
+def compute_not(y):
     return 1.0 - y
 
 
-def compute_or(y_signals: pd.DataFrame) -> pd.Series:
+def compute_or(y_signals):
     return y_signals.max(axis=1)
 
 
-def compute_or_binary(x: pd.Series, y: pd.Series) -> pd.Series:
+def compute_or_binary(x, y):
     return pd.concat([x, y], axis=1).interpolate('values', limit_direction='both').max(axis=1)
 
 
-def compute_and(y_signals: pd.DataFrame) -> pd.Series:
+def compute_and(y_signals):
     return y_signals.min(axis=1)
 
 
-def compute_and_binary(x: pd.Series, y: pd.Series) -> pd.Series:
+def compute_and_binary(x, y):
     return pd.concat([x, y], axis=1).interpolate('values', limit_direction='both').max(axis=1)
 
 
-def compute_eventually(y: pd.Series, interval: stl.Interval, dt: float, window: str or tuple or float) -> pd.Series:
+def compute_eventually(y, interval, dt, window):
     a, b = interval
     y = y.shift(-int(a // dt)).interpolate(limit_direction='both')
 
@@ -169,7 +179,7 @@ def compute_eventually(y: pd.Series, interval: stl.Interval, dt: float, window: 
     return z
 
 
-def compute_globally(y: pd.Series, interval: stl.Interval, dt: float) -> pd.Series:
+def compute_globally(y, interval, dt):
     a, b = interval
     y = y.shift(-int(a // dt)).interpolate(limit_direction='both')
 
@@ -184,5 +194,5 @@ def compute_globally(y: pd.Series, interval: stl.Interval, dt: float) -> pd.Seri
         return y.iloc[::-1].expanding(1).min().iloc[::-1]
 
 
-def compute_until(x: pd.Series, y: pd.Series, interval: stl.Interval, dt: float) -> pd.Series:
+def compute_until(x, y, interval, dt):
     raise NotImplementedError('Robustness of the until operator has not been implemented')

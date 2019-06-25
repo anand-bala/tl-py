@@ -1,3 +1,11 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import super
+from builtins import map
+from future import standard_library
+standard_library.install_aliases()
 from sympy import latex
 
 from temporal_logic.signal_tl.core.base import Expression
@@ -30,7 +38,7 @@ class Not(LogicOp):
     nargs = 1
     _symbol = r'\neg'
 
-    def to_nnf(self):
+    def to_nnf(self): # type: () -> Expression
         phi = self.args[0]  # type: Expression
         func = phi.func
         if phi.is_Singleton:
@@ -74,7 +82,8 @@ class Or(LogicOp):
     _symbol = r'\lor'
 
     @classmethod
-    def _filter_args(cls, *args) -> tuple:
+    def _filter_args(cls, *args):
+        # type: *Union[Expression, sympy.Expr] -> Tuple[Expression]
         args = super()._filter_args(*args)
         new_args = []
         for arg in args:
@@ -94,7 +103,8 @@ class And(LogicOp):
     _symbol = r'\land'
 
     @classmethod
-    def _filter_args(cls, *args) -> tuple:
+    def _filter_args(cls, *args):
+        # type: *Union[Expression, sympy.Expr] -> Tuple[Expression]
         args = super()._filter_args(*args)
         new_args = []
         for arg in args:

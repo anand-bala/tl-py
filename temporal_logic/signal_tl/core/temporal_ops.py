@@ -1,3 +1,11 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import super
+from future import standard_library
+standard_library.install_aliases()
+from builtins import object
 import math
 
 from sympy import latex
@@ -6,7 +14,7 @@ import sympy
 from temporal_logic.signal_tl.core.base import Expression, Parameter
 
 
-class Interval:
+class Interval(object):
     def __init__(self, a, b, lopen=False, ropen=False):
         self.a = a
         self.b = b

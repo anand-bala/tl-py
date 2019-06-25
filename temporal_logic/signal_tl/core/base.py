@@ -1,3 +1,10 @@
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
+from builtins import map
+from future import standard_library
+standard_library.install_aliases()
 import math
 from abc import ABC, abstractmethod
 from collections import deque
@@ -83,7 +90,8 @@ class Expression(ABC):
                         other.__module__ + "." + other.__class__.__qualname__)
 
     @classmethod
-    def _filter_args(cls, *args) -> tuple:
+    def _filter_args(cls, *args):
+        # type: *Union[Expression, sympy.Expr] -> Tuple[Expression]
         return tuple(map(cls.convert, args))
 
     @property

@@ -6,7 +6,14 @@ It's mostly a verbatim port of the `robusthom` code from the Breach source.
 [1] A. Donzé, T. Ferrère, and O. Maler, “Efficient Robust Monitoring for STL,”
     in Computer Aided Verification, 2013, pp. 264–279.
 """
+from __future__ import division
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
 from collections import deque, namedtuple
+from typing import Union, List, Tuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -23,7 +30,8 @@ Point = namedtuple('Point', ('value', 'time'))
 Sample = namedtuple('Sample', ('value', 'time', 'derivative'))
 
 
-def efficient_robustness(phi: stl.Expression, w: pd.DataFrame, t: list or tuple or np.ndarray = None) -> pd.Series:
+def efficient_robustness(phi, w, t=None):
+    # type: stl.Expression, pd.DataFrame, Optional[Union[List, Tuple, np.ndarray]] -> pd.Series
     """
     Compute the robustness of the given trace `w` against a STL property `phi`.
 
@@ -32,7 +40,7 @@ def efficient_robustness(phi: stl.Expression, w: pd.DataFrame, t: list or tuple 
     :param w: A signal trace of a system. It must be convertible to a Pandas DataFrame where the names of the columns correspond to the signals defined in the STL Expression.
     :type w: pd.DataFrame
     :param t: List of time points to get the robustness from (default: all points in `w`)
-    :type t: list or tuple or np.ndarray
+    :type t: Optional[Union[List, Tuple, np.ndarray]]
     :return: The robustness signal for the given trace
     :rtype: pd.Series
     """
@@ -93,27 +101,27 @@ def efficient_robustness(phi: stl.Expression, w: pd.DataFrame, t: list or tuple 
     return z
 
 
-def compute_not(y: pd.Series) -> pd.Series:
+def compute_not(y):
     return -y
 
 
-def compute_or(y_signals: pd.DataFrame) -> pd.Series:
+def compute_or(y_signals):
     return y_signals.max(axis=1)
 
 
-def compute_or_binary(x: pd.Series, y: pd.Series) -> pd.Series:
+def compute_or_binary(x, y):
     return pd.concat([x, y], axis=1).interpolate('values', limit_area='inside').max(axis=1)
 
 
-def compute_and(y_signals: pd.DataFrame) -> pd.Series:
+def compute_and(y_signals):
     return y_signals.min(axis=1)
 
 
-def compute_and_binary(x: pd.Series, y: pd.Series) -> pd.Series:
+def compute_and_binary(x, y):
     return pd.concat([x, y], axis=1).min(axis=1)
 
 
-def compute_eventually(signal: pd.Series, interval: stl.Interval = stl.Interval(0, np.inf)) -> pd.Series:
+def compute_eventually(signal, interval = stl.Interval(0, np.inf)):
     a, b = interval
 
     if a > 0:
@@ -127,7 +135,7 @@ def compute_eventually(signal: pd.Series, interval: stl.Interval = stl.Interval(
         return _bounded_eventually(signal, b - a)
 
 
-def _bounded_eventually(y: pd.Series, window: float) -> pd.Series:
+def _bounded_eventually(y, window):
     z2 = y.copy()
     z2.index -= window
     z3 = compute_or_binary(
@@ -137,15 +145,15 @@ def _bounded_eventually(y: pd.Series, window: float) -> pd.Series:
     return compute_or_binary(y, z3).reindex(y.index)
 
 
-def _unbounded_eventually(y: pd.Series) -> pd.Series:
+def _unbounded_eventually(y):
     return y.iloc[::-1].expanding(1).max().iloc[::-1]
 
 
-def compute_globally(y: pd.Series, interval: stl.Interval = stl.Interval(0, np.inf)) -> pd.Series:
+def compute_globally(y, interval = stl.Interval(0, np.inf)):
     return -compute_eventually(-y, interval)
 
 
-def compute_until(signal1: pd.Series, signal2: pd.Series, interval: stl.Interval) -> pd.Series:
+def compute_until(signal1, signal2, interval):
     a, b = interval
     if np.isinf(b):
         if a == 0:
@@ -159,7 +167,7 @@ def compute_until(signal1: pd.Series, signal2: pd.Series, interval: stl.Interval
         return _timed_until(signal1, signal2, interval)
 
 
-def plateau_maxmin(x: pd.Series, a: int or float, fn='max') -> pd.Series:
+def plateau_maxmin(x, a, fn='max'):
     """
     :param x: 1-D array with data points
     :param a: size of interval (can be float timestamp diff)
@@ -238,7 +246,7 @@ def plateau_maxmin(x: pd.Series, a: int or float, fn='max') -> pd.Series:
     return z.reindex(x.index)
 
 
-def _unbounded_until(signal1: pd.Series, signal2: pd.Series):
+def _unbounded_until(signal1, signal2):
     z_max = BOTTOM
     z = pd.Series()
 
@@ -255,7 +263,7 @@ def _unbounded_until(signal1: pd.Series, signal2: pd.Series):
     return z
 
 
-def _timed_until(x: pd.Series, y: pd.Series, interval: stl.Interval) -> pd.Series:
+def _timed_until(x, y, interval):
     a, b = interval
 
     z2 = _bounded_eventually(y, b-a)
@@ -273,7 +281,7 @@ def _timed_until(x: pd.Series, y: pd.Series, interval: stl.Interval) -> pd.Serie
         )
 
 
-def _segment_until(signal1: pd.Series, signal2: pd.Series, s: float, t: float, z_max: float, out: pd.Series = None):
+def _segment_until(signal1, signal2, s, t, z_max, out = None):
 
     z = pd.Series()
     x = signal1.reindex(signal1.index.union([s, t])).interpolate(
@@ -305,7 +313,7 @@ def _segment_until(signal1: pd.Series, signal2: pd.Series, s: float, t: float, z
     return z
 
 
-def _bounded_globally(x: pd.Series, window: int or float):
+def _bounded_globally(x, window):
     z2 = x.copy()
     z2.index -= window
     z3 = compute_and_binary(
@@ -315,7 +323,7 @@ def _bounded_globally(x: pd.Series, window: int or float):
     return compute_and_binary(x, z3)
 
 
-def _partial_or(x: pd.Series, y: pd.Series, s: float, t: float, out: pd.Series = None):
+def _partial_or(x, y, s, t, out = None):
     z = pd.Series()
     x = x.reindex(x.index.union([s, t])).interpolate(
         'values', limit_direction='both')
@@ -330,7 +338,7 @@ def _partial_or(x: pd.Series, y: pd.Series, s: float, t: float, out: pd.Series =
     return z
 
 
-def _partial_and(x: pd.Series, y: pd.Series, s: float, t: float, out: pd.Series = None):
+def _partial_and(x, y, s, t, out = None):
     z = pd.Series()
     x = x.reindex(x.index.union([s, t])).interpolate(
         'values', limit_direction='both')
@@ -345,7 +353,7 @@ def _partial_and(x: pd.Series, y: pd.Series, s: float, t: float, out: pd.Series 
     return z
 
 
-def _compute_partial_eventually(signal: pd.Series, s, t, out: pd.Series = None) -> pd.Series:
+def _compute_partial_eventually(signal, s, t, out = None):
     z = pd.Series()
     continued = False
     z_max = BOTTOM
@@ -386,7 +394,7 @@ def _compute_partial_eventually(signal: pd.Series, s, t, out: pd.Series = None) 
     return z
 
 
-def _compute_segment_and(signal1: pd.Series, signal2: pd.Series, begin, end, out: pd.Series = None) -> pd.Series:
+def _compute_segment_and(signal1, signal2, begin, end, out = None):
     z = pd.Series()
 
     continued = False
@@ -446,7 +454,7 @@ def _compute_segment_and(signal1: pd.Series, signal2: pd.Series, begin, end, out
     return z
 
 
-def _compute_segment_or(signal1: pd.Series, signal2: pd.Series, begin, end, out: pd.Series = None) -> pd.Series:
+def _compute_segment_or(signal1, signal2, begin, end, out = None):
     z = pd.Series()
 
     continued = False
@@ -507,7 +515,7 @@ def _compute_segment_or(signal1: pd.Series, signal2: pd.Series, begin, end, out:
     return z
 
 
-def time_intersect(x: Sample, y: Sample):
+def time_intersect(x, y):
     """
     Intersection of two lines given a point slope form
     """

@@ -2,9 +2,15 @@
 
 This package defines STL grammar and semantics.
 """
+from __future__ import unicode_literals
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
 from collections import deque
-from typing import Tuple, Union, Iterator
+from typing import Tuple, Union, Iterator, Iterable
 
 import sympy
 from .core.atoms import Atom, TLFalse, TLTrue, true, false, Predicate
@@ -26,17 +32,18 @@ Finally = Eventually
 Ev = Eventually
 
 
-def signals(names):
+def signals(names): # type: Union[str, Iterable[str]] -> Tuple[Signal]
     """
     Declare a bunch of signals. see: :func:`sympy.symbols` for more info on how to use
     :param names: List of signal names
+    :type names: Union[str, Iterable[str]]
     :return: tuple of signal variables
     :rtype: Tuple[Signal]
     """
     return sympy.symbols(names, cls=Signal)
 
 
-def params(names):
+def params(names):  # type: Union[str, Iterable[str]] -> Tuple[Parameter]
     """
     Declare a bunch of parameters in the STL formula
     :param names: List of parameter names
@@ -45,7 +52,8 @@ def params(names):
     return sympy.symbols(names, cls=Parameter)
 
 
-def preorder_iterator(expr: Expression) -> Iterator[Expression]:
+def preorder_iterator(expr):
+    # type: Expression -> Iterator[Expression]
     if expr is None:
         return None
 
@@ -56,7 +64,8 @@ def preorder_iterator(expr: Expression) -> Iterator[Expression]:
         yield node
         stack.extend(list(reversed(node.args)))
 
-def postorder_iterator(expr: Expression) -> Iterator[Expression]:
+def postorder_iterator(expr):
+    # type: Expression -> Iterator[Expression]
     # TODO: Single stack implementation?
     if expr is None:
         return None
@@ -73,7 +82,8 @@ def postorder_iterator(expr: Expression) -> Iterator[Expression]:
     yield stack2.pop()
 
 
-def get_atoms(expr: Expression) -> Union[Tuple[Atom, ...], None]:
+def get_atoms(expr):
+    # type: Expression -> Union[Tuple[Atom, ...], None]
     if expr is None:
         return None
     atoms = deque()
@@ -83,7 +93,8 @@ def get_atoms(expr: Expression) -> Union[Tuple[Atom, ...], None]:
     return tuple(atoms)
 
 
-def is_nnf(phi: Expression):
+def is_nnf(phi):
+    # type: Expression -> bool
     if phi is None:
         return True
     check = True
