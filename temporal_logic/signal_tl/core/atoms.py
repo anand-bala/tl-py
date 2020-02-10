@@ -6,7 +6,9 @@ import sympy
 from sympy import sympify
 from sympy.core.relational import Ge, Gt, Le, Lt
 
-from temporal_logic.signal_tl.core.base import Expression, Signal
+from temporal_logic.signal_tl.core.base import Expression, TraceType
+
+from typing import Set, Union, Tuple
 
 
 class Atom(Expression):
@@ -14,7 +16,7 @@ class Atom(Expression):
     nargs = 0
 
     @abstractmethod
-    def eval(self, *args):
+    def eval(self, trace: TraceType) -> bool:
         pass
 
 
@@ -22,18 +24,18 @@ class TLTrue(Atom):
     """Atomic True"""
     is_Singleton = True
 
-    def eval(self):
+    def eval(self, _trace: TraceType) -> bool:
         return True
 
-    def __nonzero__(self):
+    def __nonzero__(self) -> bool:
         return True
 
     __bool__ = __nonzero__
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(True)
 
-    def _latex(self):
+    def _latex(self) -> str:
         return r' \top '
 
 
@@ -41,18 +43,18 @@ class TLFalse(Atom):
     """Atomic False"""
     is_Singleton = True
 
-    def eval(self):
+    def eval(self, _trace: TraceType) -> bool:
         return False
 
-    def __nonzero__(self):
+    def __nonzero__(self) -> bool:
         return False
 
     __bool__ = __nonzero__
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(False)
 
-    def _latex(self):
+    def _latex(self) -> str:
         return r' \bot '
 
 
@@ -69,9 +71,9 @@ class Predicate(Atom):
         :math:`x_i` are the parameters of the signal.
 
     """
-    _predicate = None
+    _predicate: Union[sympy.Ge, sympy.Gt] = None
     is_Predicate = True
-    _signals = set()
+    _signals: Set[sympy.Symbol] = set()
     _f = lambda *args: np.empty(0)
 
     def __new__(cls, *args, **kwargs):
@@ -80,13 +82,14 @@ class Predicate(Atom):
         predicate = cls._get_predicate(args[0])
         obj = super(Predicate, cls).__new__(cls, *args, **kwargs)
         obj._predicate = predicate
-        obj._signals = set(map(str, predicate.atoms(Signal)))
+        obj._signals = set(map(str, predicate.atoms(sympy.Symbol)))
         obj._f = sympy.lambdify(obj._signals, obj._predicate.gts, 'numpy')
         return obj
 
     @classmethod
-    def _get_predicate(cls, args):
+    def _get_predicate(cls, args: sympy.Rel) -> Union[sympy.Ge, sympy.Gt]:
         """Return the predicate in the form f(x) >= 0"""
+        # TODO(anand): Deal with equality constraints
         pred_default = sympify(args)
         if isinstance(pred_default, (Ge, Gt, Le, Lt)):
 
@@ -110,10 +113,10 @@ class Predicate(Atom):
         return self._predicate
 
     @property
-    def signals(self):
-        return self._signals  # type: set
+    def signals(self) -> Set[sympy.Symbol]:
+        return self._signals
 
-    def f(self, trace):
+    def f(self, trace: Union[pd.Series, pd.DataFrame]) -> pd.Series:
         """
         Evaluate the RHS of predicate
 
@@ -123,20 +126,23 @@ class Predicate(Atom):
         """
         if isinstance(trace, pd.DataFrame):
             assert self.signals.issubset(
-                trace.columns), 'The signals used in the predicates are not a subset of the column names of the trace'
+                trace.columns
+            ), 'The signals used in the predicates are not a subset of the column names of the trace'
             signals = tuple(trace[i].values for i in self.signals)
             return self._f(*signals)
 
         elif isinstance(trace, pd.Series):
             assert len(
-                self.signals) == 1, 'Predicate uses more than 1 symbol, got 1-D trace'
+                self.signals
+            ) == 1, 'Predicate uses more than 1 symbol, got 1-D trace'
             signal = trace.values
             return self._f(signal)
         else:
             raise ValueError(
-                'Expected pandas DataFrame or Series, got {}'.format(trace.__qualname__))
+                'Expected pandas DataFrame or Series, got {}'.format(
+                    trace.__qualname__))
 
-    def eval(self, trace):
+    def eval(self, trace: Union[pd.Series, pd.DataFrame]) -> bool:
         """
         Evaluate the predicate.
 
@@ -146,11 +152,8 @@ class Predicate(Atom):
             return self.f(trace) >= 0
         return self.f(trace) > 0
 
-    def _latex(self):
+    def _latex(self) -> str:
         return sympy.latex(self.predicate)
 
 
-__all__ = [
-    'TLFalse', 'TLTrue', 'true', 'false',
-    'Predicate'
-]
+__all__ = ['TLFalse', 'TLTrue', 'true', 'false', 'Predicate']

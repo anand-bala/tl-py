@@ -3,22 +3,13 @@ from abc import ABC, abstractmethod
 from collections import deque
 
 import sympy
+import pandas as pd
 
 import temporal_logic.signal_tl as stl
 
+from typing import Union
 
-class Signal(sympy.Symbol):
-    def __ge__(self, other):
-        return stl.Predicate(self >= other)
-
-    def __gt__(self, other):
-        return stl.Predicate(self > other)
-
-    def __le__(self, other):
-        return stl.Predicate(self <= other)
-
-    def __lt__(self, other):
-        return stl.Predicate(self < other)
+TraceType = Union[pd.Series, pd.DataFrame]
 
 
 class Parameter(sympy.Symbol):
@@ -39,7 +30,7 @@ class Expression(ABC):
 
     nargs = 0
 
-    _params = []
+    # _params = []
 
     def __new__(cls, *args, **kwargs):
 
@@ -134,7 +125,7 @@ class Expression(ABC):
     def __hash__(self):
         h = self._mhash
         if h is None:
-            h = hash((type(self).__name__,) + self._hashable_content())
+            h = hash((type(self).__name__, ) + self._hashable_content())
             self._mhash = h
         return h
 

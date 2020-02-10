@@ -18,7 +18,8 @@ class LogicOp(Expression):
             return r'{} \left( {} \right)'.format(symbol, latex(self.args[0]))
         if self.nargs == 2:
             a, b = self.args
-            return r'\left( {} \right) {} \left( {} \right)'.format(latex(a), symbol, latex(b))
+            return r'\left( {} \right) {} \left( {} \right)'.format(
+                latex(a), symbol, latex(b))
 
 
 class Not(LogicOp):
@@ -111,5 +112,8 @@ class Implies(LogicOp):
 
 
 __all__ = [
-    'And', 'Or', 'Not', 'Implies',
+    'And',
+    'Or',
+    'Not',
+    'Implies',
 ]

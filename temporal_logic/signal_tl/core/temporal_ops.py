@@ -12,7 +12,8 @@ class Interval:
         self.b = b
         self._lopen = lopen if not math.isinf(-a) else True
         self._ropen = ropen if not math.isinf(b) else True
-        self.is_parametric = isinstance(a, Parameter) or isinstance(b, Parameter)
+        self.is_parametric = isinstance(a, Parameter) or isinstance(
+            b, Parameter)
 
     @property
     def interval(self):
@@ -59,7 +60,7 @@ class Interval:
     def latex(self):
         i = sympy.Interval(self.a, self.b, self.lopen, self.ropen)
         return latex(i)
-    
+
     def __iter__(self):
         yield self.a
         yield self.b
@@ -105,7 +106,8 @@ class TemporalOp(Expression):
             # TODO: string interval argument
             raise NotImplementedError('string interval argument not supported')
         if isinstance(interval, (tuple, list)):
-            assert len(interval) == 2, "Expected interval with left and right bounds"
+            assert len(
+                interval) == 2, "Expected interval with left and right bounds"
             a, b = interval
             return Interval(a, b)
         if isinstance(interval, Interval):
@@ -121,7 +123,8 @@ class TemporalOp(Expression):
             return r'{} \left( {} \right)'.format(symbol, latex(self.args[0]))
         if self.nargs == 2:
             a, b = self.args
-            return r'\left( {} \right) {} \left( {} \right)'.format(latex(a), symbol, latex(b))
+            return r'\left( {} \right) {} \left( {} \right)'.format(
+                latex(a), symbol, latex(b))
         raise ValueError('There is no temporal op with nargs > 2')
 
 
@@ -149,6 +152,4 @@ class Eventually(TemporalOp):
     _symbol = r'\mathbf{F}'
 
 
-__all__ = [
-    'Until', 'Eventually', 'Always', 'Releases'
-]
+__all__ = ['Until', 'Eventually', 'Always', 'Releases']
