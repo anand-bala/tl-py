@@ -11,10 +11,17 @@ I got pretty annoyed with defining TL formulas as text (in files or as strings).
 
 To do this, I heavily use [SymPy](https://www.sympy.org/en/index.html) and borrow many ideas from it.
 
-# Installation
+## Installation
 
 Using `pip`:
 
 ```
 pip install git+https://github.com/anand-bala/tl-py@v0.1.0#egg=temporal_logic
 ```
+
+## Related projects
+
+- [py-matric-temporal-logic](https://github.com/mvcisback/py-metric-temporal-logic.git)
+    - This project is really good, but I wanted to use different quantitative
+      semantics defined for STL, for example, [filtering semantics](https://arxiv.org/pdf/1510.08079.pdf).
+
