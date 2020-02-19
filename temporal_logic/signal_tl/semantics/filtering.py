@@ -55,7 +55,7 @@ def _compute_and_binary(x, y):
 
 
 def _compute_ev(y, window):
-    return scipy.convolve(y, window, mode='same')
+    return np.convolve(y, window, mode='same')
 
 
 def _compute_alw(y, interval):
@@ -141,12 +141,12 @@ class FilteringMonitor(BaseMonitor):
         if len(self.signals) != w.shape[1]:
             raise ValueError(
                 'Expected shape of w to be (n_samples, n_states, ...), got {}'.format(w.shape))
-        if not t:
+        if t is None:
             t = np.arange(w.shape[0])
 
         orig_t = t
         min_dt = min(dt, np.amin(np.ediff1d(t)))
-        n_samples = np.ceil((t[-1] - t[0]) / min_dt) + 1
+        n_samples = int(np.ceil((t[-1] - t[0]) / min_dt) + 1)
         t, dt = np.linspace(t[0], t[-1], num=n_samples, retstep=True)
         max_t, min_t = t[-1], t[0]
 
