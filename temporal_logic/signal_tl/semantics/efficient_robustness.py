@@ -7,19 +7,22 @@ from scipy.ndimage.filters import maximum_filter1d, minimum_filter1d
 from temporal_logic import signal_tl
 from temporal_logic.signal_tl import as_Expression
 
+from typing import Sequence, Optional, Union, Set, Tuple
+from temporal_logic.types import SignalType, TraceType, NumericType
+
 from .base import BaseMonitor
 
 BOTTOM = -np.inf
 TOP = np.inf
 
 
-def TOP_FN(_): return np.inf
+def TOP_FN(_) -> float: return np.inf
 
 
-def BOTTOM_FN(_): return -np.inf
+def BOTTOM_FN(_) -> float: return -np.inf
 
 
-def _get_atom_fn(inputs, expr):
+def _get_atom_fn(inputs: Sequence[str], expr: signal_tl.Atom):
     if isinstance(expr, signal_tl.TLTrue):
         return TOP_FN
     if isinstance(expr, signal_tl.TLFalse):
@@ -32,18 +35,22 @@ def _get_atom_fn(inputs, expr):
 
 class EfficientRobustnessMonitor(BaseMonitor):
 
+    _spec: signal_tl.Expression
+    _signals: Set[str]
+    _atoms: Set[signal_tl.Atom]
+
     @property
-    def horizon(self):
+    def horizon(self) -> NumericType:
         return np.inf
 
-    def __init__(self, spec, signals):
+    def __init__(self, spec: signal_tl.Expression, signals: Sequence[str]):
         """
         Initialize robustness computer for spec
         :param spec: STL specification to monitor
         :param signals: List of signal parameters. This must match the symbols used in the predicates
         """
         self._spec = as_Expression(spec)
-        self._signals = signals
+        self._signals = frozenset(signals)
         self._atoms = frozenset(signal_tl.get_atoms(spec))
         self._reset()
 
@@ -53,18 +60,18 @@ class EfficientRobustnessMonitor(BaseMonitor):
         self.atom_signals = dict(zip(self._atoms, [None] * len(self._atoms)))
 
     @property
-    def spec(self):
+    def spec(self) -> signal_tl.Expression:
         return self._spec
 
     @property
-    def signals(self):
+    def signals(self) -> Set[str]:
         return self._signals
 
     @property
-    def atoms(self):
+    def atoms(self) -> Set[signal_tl.Atom]:
         return self._atoms
 
-    def __call__(self, w, t=None, dt=np.inf):
+    def __call__(self, w: TraceType, t: Optional[SignalType] = None, dt: Optional[NumericType] = np.inf) -> SignalType:
         """
         Compute the robustness of the given trace containing the specified signals
 
@@ -106,7 +113,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
         y = interp1d(t, y_signal, axis=0)
         return y(orig_t)
 
-    def robustness_signal(self, phi, w):
+    def robustness_signal(self, phi: signal_tl.Expression, w: TraceType) -> SignalType:
         """
         Given a spec an
         :param phi:
@@ -142,22 +149,22 @@ class EfficientRobustnessMonitor(BaseMonitor):
 
         return np.full(len(w), fill_value=-np.inf)
 
-    def compute_not(self, y):
+    def compute_not(self, y: np.ndarray) -> np.ndarray:
         return -1 * y
 
-    def compute_or(self, y_signals):
+    def compute_or(self, y_signals: np.ndarray) -> np.ndarray:
         return np.amax(y_signals, axis=1)
 
-    def compute_or_binary(self, x, y):
+    def compute_or_binary(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         return np.maximum(x, y)
 
-    def compute_and(self, y_signals):
+    def compute_and(self, y_signals: np.ndarray) -> np.ndarray:
         return np.amin(y_signals, axis=1)
 
-    def compute_and_binary(self, x, y):
+    def compute_and_binary(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         return np.minimum(x, y)
 
-    def compute_ev(self, y, interval):
+    def compute_ev(self, y: np.ndarray, interval: Tuple[NumericType, NumericType]) -> np.ndarray:
         a, b = interval
         if a > 0:
             y = shift(y, -a, mode='nearest')
@@ -168,7 +175,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
         else:
             return self._compute_bounded_eventually(y, b - a)
 
-    def _compute_eventually(self, y):
+    def _compute_eventually(self, y: np.ndarray) -> np.ndarray:
         z = np.full_like(y, BOTTOM)
 
         y = np.append(y, y[-1])
@@ -188,24 +195,24 @@ class EfficientRobustnessMonitor(BaseMonitor):
             z_max = z[i]
         return z
 
-    def _compute_bounded_eventually(self, x, a):
+    def _compute_bounded_eventually(self, x: np.ndarray, a: NumericType) -> np.ndarray:
         z1 = maximum_filter1d(x, a, mode='nearest')
         z2 = shift(x, -a, cval=BOTTOM)
         z3 = self.compute_or_binary(z2, z1)
         z = self.compute_or_binary(x, z3)
         return z
 
-    def compute_alw(self, y, interval):
+    def compute_alw(self, y: np.ndarray, interval: NumericType) -> np.ndarray:
         return -1 * self.compute_ev(-1 * y, interval)
 
-    def _compute_bounded_globally(self, x, a):
+    def _compute_bounded_globally(self, x: np.ndarray, a: NumericType) -> np.ndarray:
         z1 = minimum_filter1d(x, a, mode='nearest')
         z2 = shift(x, -a, cval=TOP)
         z3 = self.compute_and_binary(z2, z1)
         z = self.compute_and_binary(x, z3)
         return z
 
-    def compute_until(self, x, y, interval):
+    def compute_until(self, x: np.ndarray, y: np.ndarray, interval: NumericType) -> np.ndarray:
         a, b = interval
         if np.isinf(b):
             if a == 0:
@@ -226,7 +233,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
             else:
                 return self.compute_and_binary(x, z4)
 
-    def _compute_unbounded_until(self, x, y):
+    def _compute_unbounded_until(self, x: np.ndarray, y: np.ndarray) -> np.ndarray:
         z = np.full_like(x, BOTTOM)
 
         x = np.append(x, x[-1])

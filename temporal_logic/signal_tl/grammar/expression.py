@@ -3,8 +3,10 @@ from abc import ABC, abstractmethod
 
 import sympy
 
+from typing import Union, Sequence
+from temporal_logic.types import *
 
-def as_Expression(arg):
+def as_Expression(arg: Union[Expression, sympy.Expr]) -> Expression:
     """Convert given arg to Expression"""
 
     from . import atoms
@@ -36,17 +38,17 @@ class Expression(ABC):
     This class just holds a bunch of methods that determine what kind of expression it is (defined below)
     """
 
-    is_Atom = False
-    is_Singleton = False
-    is_Predicate = False
-    is_LogicOp = False
-    is_TemporalOp = False
+    is_Atom: bool = False
+    is_Singleton: bool = False
+    is_Predicate: bool = False
+    is_LogicOp: bool = False
+    is_TemporalOp: bool = False
 
-    nargs = 0
+    nargs: int = 0
 
     @classmethod
     @abstractmethod
-    def _filter_args(cls, *args) -> tuple:
+    def _filter_args(cls, *args) -> Sequence[Expression]:
         pass
 
     def __new__(cls, *args, **kwargs):

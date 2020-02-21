@@ -16,6 +16,8 @@ from scipy.ndimage.filters import minimum_filter1d
 from temporal_logic import signal_tl
 from temporal_logic.signal_tl import as_Expression
 
+from typing import Sequence, Optional, Union, Set, Tuple
+from temporal_logic.types import SignalType, TraceType, NumericType
 
 from .base import BaseMonitor
 
@@ -23,7 +25,7 @@ BOTTOM = 0.0
 TOP = 1.0
 
 
-def get_spec_interval(spec: signal_tl.Expression):
+def get_spec_interval(spec: signal_tl.Expression) -> NumericType:
     """
 
     :param spec:
@@ -38,27 +40,27 @@ def get_spec_interval(spec: signal_tl.Expression):
         return 0
 
 
-def _compute_or(y_signals):
+def _compute_or(y_signals: np.ndarray) -> np.ndarray:
     return np.amax(y_signals, axis=1)
 
 
-def _compute_or_binary(x, y):
+def _compute_or_binary(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     return np.maximum(x, y)
 
 
-def _compute_and(y_signals):
+def _compute_and(y_signals: np.ndarray) -> np.ndarray:
     return np.amin(y_signals, axis=1)
 
 
-def _compute_and_binary(x, y):
+def _compute_and_binary(x: np.ndarray, y: np.ndarray) -> np.ndarray:
     return np.minimum(x, y)
 
 
-def _compute_ev(y, window):
+def _compute_ev(y: np.ndarray, window: np.ndarray) -> np.ndarray:
     return np.convolve(y, window, mode='same')
 
 
-def _compute_alw(y, interval):
+def _compute_alw(y: np.ndarray, interval: Tuple[NumericType, NumericType]) -> np.ndarray:
     a, b = interval
     if a == b:
         return y
