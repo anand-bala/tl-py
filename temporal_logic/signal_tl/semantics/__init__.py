@@ -1,8 +1,9 @@
 import numpy as np
+
 from .base import BaseMonitor
-from .efficient_robustness import EfficientRobustnessMonitor
-from .online_monitoring import OnlineRobustness
 from .filtering import FilteringMonitor
+from .online_monitoring import OnlineRobustness
+from .efficient_robustness import EfficientRobustnessMonitor
 
 
 def check_sat(phi, signals, trace, t=None, dt=np.inf):

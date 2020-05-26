@@ -3,18 +3,19 @@
 This package defines STL grammar and semantics.
 """
 
+from typing import Tuple, Union
+from collections import deque
+
 import sympy
 
+from .grammar.atoms import Atom, TLTrue, TLFalse, Predicate, true, false
+from .grammar.basic_ops import Or, And, Not, Implies
 from .grammar.expression import Expression, as_Expression
-from .grammar.atoms import Atom, TLFalse, TLTrue, true, false, Predicate
-from .grammar.basic_ops import And, Or, Not, Implies
-from .grammar.temporal_ops import Eventually, Always, Until
+from .grammar.temporal_ops import Until, Always, Eventually
 
 # from . import semantics as monitors
 
-from collections import deque
 
-from typing import Tuple, Union
 
 U = Until
 
@@ -53,10 +54,24 @@ def get_atoms(expr: Expression) -> Union[Tuple[Atom, ...], None]:
     return tuple(atoms)
 
 
-__all__ = ['Atom', 'Predicate',
-           'TLTrue', 'true', 'TLFalse', 'false',
-           'Not', 'Or', 'And', 'Implies',
-           'Until', 'U',
-           'Always', 'Alw', 'G',
-           'Eventually', 'Ev', 'F',
-           'preorder_iterator']
+__all__ = [
+    "Atom",
+    "Predicate",
+    "TLTrue",
+    "true",
+    "TLFalse",
+    "false",
+    "Not",
+    "Or",
+    "And",
+    "Implies",
+    "Until",
+    "U",
+    "Always",
+    "Alw",
+    "G",
+    "Eventually",
+    "Ev",
+    "F",
+    "preorder_iterator",
+]

@@ -8,8 +8,8 @@ Online monitoring of robustness as defined in [1].
 
 """
 
-import sympy
 import numpy as np
+import sympy
 
 import temporal_logic.signal_tl as stl
 from temporal_logic.signal_tl import as_Expression
@@ -18,10 +18,12 @@ BOTTOM = -np.inf
 TOP = np.inf
 
 
-def TOP_FN(_): return np.inf
+def TOP_FN(_):
+    return np.inf
 
 
-def BOTTOM_FN(_): return -np.inf
+def BOTTOM_FN(_):
+    return -np.inf
 
 
 def _get_atom_fn(inputs, expr):
@@ -32,7 +34,8 @@ def _get_atom_fn(inputs, expr):
     if isinstance(expr, stl.Predicate):
         return sympy.lambdify(inputs, expr.expr)
     raise TypeError(
-        'Invalid input type: must be of type signal_tl.Atom, got {}'.format(type(expr)))
+        "Invalid input type: must be of type signal_tl.Atom, got {}".format(type(expr))
+    )
 
 
 def minkowski_sum(i1, i2):
@@ -42,7 +45,6 @@ def minkowski_sum(i1, i2):
 
 
 class OnlineRobustness:
-
     def __init__(self, signals, spec):
         self._signals = signals
         self._spec = as_Expression(spec)
@@ -54,8 +56,7 @@ class OnlineRobustness:
 
         self.atom_functions = dict(
             zip(
-                self._atoms,
-                [_get_atom_fn(self._signals, atom) for atom in self._atoms]
+                self._atoms, [_get_atom_fn(self._signals, atom) for atom in self._atoms]
             )
         )
 
@@ -75,7 +76,9 @@ class OnlineRobustness:
         for node in stl.preorder_iterator(spec):
             if node.parent is None:
                 horizons[node] = (0, 0)
-            elif isinstance(node.parent, temporal_rl.temporal_logic.signal_tl.grammar.TemporalOp):
+            elif isinstance(
+                node.parent, temporal_rl.temporal_logic.signal_tl.grammar.TemporalOp
+            ):
                 parent_horizon = horizons[node.parent]
                 horizons[node] = minkowski_sum(node.interval, parent_horizon)
             else:
@@ -108,7 +111,8 @@ class OnlineRobustness:
             for arg in phi.args:
                 self.update_worklist(arg, t, x)
             self.worklist[phi] = np.maximum.reduce(
-                [self.worklist[arg] for arg in phi.args])
+                [self.worklist[arg] for arg in phi.args]
+            )
             return
         if isinstance(phi, stl.Always):
             self.update_worklist(phi.args[0], t, x)

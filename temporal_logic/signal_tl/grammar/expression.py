@@ -11,10 +11,10 @@ def as_Expression(arg):
     from . import basic_ops
 
     sym_2_expression = {
-        'And': basic_ops.And,
-        'Or': basic_ops.Or,
-        'Not': basic_ops.Not,
-        'Implies': basic_ops.Implies,
+        "And": basic_ops.And,
+        "Or": basic_ops.Or,
+        "Not": basic_ops.Not,
+        "Implies": basic_ops.Implies,
     }
 
     if isinstance(arg, atoms.Expression):
@@ -26,8 +26,10 @@ def as_Expression(arg):
             return sym_2_expression[type(arg).__name__](*arg.args)
         if isinstance(arg, (sympy.Ge, sympy.Gt, sympy.Le, sympy.Lt)):
             return atoms.Predicate(arg)
-    raise TypeError('Incompatible argument type: %s',
-                    arg.__module__ + "." + arg.__class__.__qualname__)
+    raise TypeError(
+        "Incompatible argument type: %s",
+        arg.__module__ + "." + arg.__class__.__qualname__,
+    )
 
 
 class Expression(ABC):
@@ -55,7 +57,7 @@ class Expression(ABC):
         if cls.nargs is None or math.isinf(cls.nargs):
             pass
         elif cls.nargs != len(_args):
-            raise ValueError('Incompatible number of args')
+            raise ValueError("Incompatible number of args")
 
         obj = object.__new__(cls)
         obj._args = obj._filter_args(*args)
@@ -73,6 +75,7 @@ class Expression(ABC):
     def __and__(self, other):
         """Logical And"""
         from . import basic_ops
+
         return basic_ops.And(self, other)
 
     __rand__ = __and__
@@ -80,6 +83,7 @@ class Expression(ABC):
     def __or__(self, other):
         """Logical Or"""
         from . import basic_ops
+
         return basic_ops.Or(self, other)
 
     __ror__ = __or__
@@ -87,21 +91,25 @@ class Expression(ABC):
     def __neg__(self):
         """Logical Negation"""
         from . import basic_ops
+
         return basic_ops.Not(self)
 
     def __invert__(self):
         """Logical Negation"""
         from . import basic_ops
+
         return basic_ops.Not(self)
 
     def __rshift__(self, other):
         """Logical Implication"""
         from . import basic_ops
+
         return basic_ops.Or(basic_ops.Not(self), other)
 
     def __lshift__(self, other):
         """Logical Reverse Implication"""
         from . import basic_ops
+
         return basic_ops.Or(basic_ops.Not(other), self)
 
     __rrshift__ = __lshift__
@@ -118,7 +126,7 @@ class Expression(ABC):
         return self.args
 
     def _noop(self, other=None):
-        raise TypeError('BooleanAtom not allowed in this context.')
+        raise TypeError("BooleanAtom not allowed in this context.")
 
     __add__ = _noop
     __radd__ = _noop

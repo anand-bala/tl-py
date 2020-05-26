@@ -2,7 +2,7 @@ from abc import abstractmethod
 
 import sympy
 from sympy import sympify
-from sympy.core.relational import Le, Lt, Ge, Gt
+from sympy.core.relational import Ge, Gt, Le, Lt
 
 from .expression import Expression
 
@@ -22,6 +22,7 @@ class Atom(Expression):
 
 class TLTrue(Atom):
     """Atomic True"""
+
     is_Singleton = True
 
     def eval(self):
@@ -36,11 +37,12 @@ class TLTrue(Atom):
         return hash(True)
 
     def tex_print(self):
-        return r' \top '
+        return r" \top "
 
 
 class TLFalse(Atom):
     """Atomic False"""
+
     is_Singleton = True
 
     def eval(self):
@@ -55,7 +57,7 @@ class TLFalse(Atom):
         return hash(False)
 
     def tex_print(self):
-        return r' \bot '
+        return r" \bot "
 
 
 true = TLTrue()
@@ -71,12 +73,13 @@ class Predicate(Atom):
         :math:`x_i` are the parameters of the signal.
 
     """
+
     _predicate = None
     is_Predicate = True
 
     def __new__(cls, *args, **kwargs):
         if len(args) != 1:
-            raise ValueError('Must provide the predicate as an argument')
+            raise ValueError("Must provide the predicate as an argument")
         predicate = cls._get_predicate(args[0])
         obj = super(Predicate, cls).__new__(cls, *args, **kwargs)
         obj._predicate = predicate
@@ -97,7 +100,7 @@ class Predicate(Atom):
             if isinstance(pred_default, Le):
                 return Gt(new_lhs, 0)
 
-        raise TypeError('The given predicate is not an inequality')
+        raise TypeError("The given predicate is not an inequality")
 
     @property
     def expr(self):
@@ -108,7 +111,7 @@ class Predicate(Atom):
         return self._predicate
 
     def eval(self, signals, *x):
-        assert (len(signals) == len(x))
+        assert len(signals) == len(x)
         fn = sympy.lambdify(signals, self.expr)
         return fn(*x)
 
@@ -116,7 +119,4 @@ class Predicate(Atom):
         return sympy.latex(self.predicate)
 
 
-__all__ = [
-    'TLFalse', 'TLTrue', true, false,
-    'Predicate'
-]
+__all__ = ["TLFalse", "TLTrue", true, false, "Predicate"]

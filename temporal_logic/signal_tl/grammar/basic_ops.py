@@ -18,7 +18,7 @@ class Not(LogicOp):
     nargs = 1
 
     def tex_print(self):
-        return r' \neg ({}) '.format(self.args[0].tex_print())
+        return r" \neg ({}) ".format(self.args[0].tex_print())
 
 
 class Or(LogicOp):
@@ -26,11 +26,12 @@ class Or(LogicOp):
 
     This is a n-ary operator where n >= 2.
     """
+
     nargs = None
 
     def tex_print(self):
         tex_args = tuple(arg.tex_print() for arg in self.args)
-        return r' \lor '.join(tex_args)
+        return r" \lor ".join(tex_args)
 
 
 class And(LogicOp):
@@ -38,11 +39,12 @@ class And(LogicOp):
 
     This is a n-ary operator where n >= 2.
     """
+
     nargs = None
 
     def tex_print(self):
         tex_args = tuple(arg.tex_print() for arg in self.args)
-        return r' \land '.join(tex_args)
+        return r" \land ".join(tex_args)
 
 
 class Implies(LogicOp):
@@ -50,7 +52,7 @@ class Implies(LogicOp):
 
     def __new__(cls, *args, **kwargs):
         if cls.nargs != len(args):
-            raise ValueError('Incompatible number of args')
+            raise ValueError("Incompatible number of args")
 
         p, q = tuple(map(as_Expression, args))
 
@@ -61,5 +63,8 @@ class Implies(LogicOp):
 
 
 __all__ = [
-    'And', 'Or', 'Not', 'Implies',
+    "And",
+    "Or",
+    "Not",
+    "Implies",
 ]

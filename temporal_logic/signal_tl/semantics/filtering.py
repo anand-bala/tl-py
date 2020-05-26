@@ -9,13 +9,12 @@ In  this, basic signal filtering is used to define the robust satisfaction degre
 import numpy as np
 import scipy
 import scipy.signal
-from scipy.interpolate import interp1d
 from scipy.ndimage import shift
+from scipy.interpolate import interp1d
 from scipy.ndimage.filters import minimum_filter1d
 
 from temporal_logic import signal_tl
 from temporal_logic.signal_tl import as_Expression
-
 
 from .base import BaseMonitor
 
@@ -55,31 +54,30 @@ def _compute_and_binary(x, y):
 
 
 def _compute_ev(y, window):
-    return np.convolve(y, window, mode='same')
+    return np.convolve(y, window, mode="same")
 
 
 def _compute_alw(y, interval):
     a, b = interval
     if a == b:
         return y
-    y = shift(y, -a, mode='nearest')
+    y = shift(y, -a, mode="nearest")
     b = min(b, len(y))
 
     # compute offset to left end of window from center
     width = int(abs(b - a)) + 1
     center = width // 2
 
-    return minimum_filter1d(y, b - a + 1, mode='nearest', origin=-center)
+    return minimum_filter1d(y, b - a + 1, mode="nearest", origin=-center)
 
 
 class FilteringMonitor(BaseMonitor):
-
     @property
     def horizon(self):
         print("WARNING: There is no well defined horizon for filtering semantics.")
         return np.inf
 
-    def __init__(self, spec, signals, window='boxcar'):
+    def __init__(self, spec, signals, window="boxcar"):
         """
         Initialize the monitor for the given spec and window (used for the convolution semantics of Temporal Ops)
 
@@ -97,8 +95,7 @@ class FilteringMonitor(BaseMonitor):
         self._reset()
 
     def _reset(self):
-        self.atom_functions = dict(
-            zip(self._atoms, [BOTTOM] * len(self._atoms)))
+        self.atom_functions = dict(zip(self._atoms, [BOTTOM] * len(self._atoms)))
         self.atom_signals = dict(zip(self._atoms, [None] * len(self._atoms)))
         self.node_robustness_signals = dict()
 
@@ -140,7 +137,10 @@ class FilteringMonitor(BaseMonitor):
             w = np.reshape(w, (len(w), 1))
         if len(self.signals) != w.shape[1]:
             raise ValueError(
-                'Expected shape of w to be (n_samples, n_states, ...), got {}'.format(w.shape))
+                "Expected shape of w to be (n_samples, n_states, ...), got {}".format(
+                    w.shape
+                )
+            )
         if t is None:
             t = np.arange(w.shape[0])
 
@@ -178,7 +178,8 @@ class FilteringMonitor(BaseMonitor):
             return 1 - self._robustness_signal(phi.args[0], w)
         if isinstance(phi, (signal_tl.And, signal_tl.Or)):
             y_signals = np.transpose(
-                np.array([self._robustness_signal(arg, w) for arg in phi.args]))
+                np.array([self._robustness_signal(arg, w) for arg in phi.args])
+            )
             if isinstance(phi, signal_tl.And):
                 z = _compute_and(y_signals)
                 self.node_robustness_signals[phi] = z

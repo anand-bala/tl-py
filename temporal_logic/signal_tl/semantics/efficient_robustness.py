@@ -1,7 +1,7 @@
 import numpy as np
 import sympy
-from scipy.interpolate import interp1d
 from scipy.ndimage import shift
+from scipy.interpolate import interp1d
 from scipy.ndimage.filters import maximum_filter1d, minimum_filter1d
 
 from temporal_logic import signal_tl
@@ -13,10 +13,12 @@ BOTTOM = -np.inf
 TOP = np.inf
 
 
-def TOP_FN(_): return np.inf
+def TOP_FN(_):
+    return np.inf
 
 
-def BOTTOM_FN(_): return -np.inf
+def BOTTOM_FN(_):
+    return -np.inf
 
 
 def _get_atom_fn(inputs, expr):
@@ -27,11 +29,11 @@ def _get_atom_fn(inputs, expr):
     if isinstance(expr, signal_tl.Predicate):
         return sympy.lambdify(inputs, expr.expr)
     raise TypeError(
-        'Invalid input type: must be of type signal_tl.Atom, got {}'.format(type(expr)))
+        "Invalid input type: must be of type signal_tl.Atom, got {}".format(type(expr))
+    )
 
 
 class EfficientRobustnessMonitor(BaseMonitor):
-
     @property
     def horizon(self):
         return np.inf
@@ -48,8 +50,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
         self._reset()
 
     def _reset(self):
-        self.atom_functions = dict(
-            zip(self._atoms, [BOTTOM_FN] * len(self._atoms)))
+        self.atom_functions = dict(zip(self._atoms, [BOTTOM_FN] * len(self._atoms)))
         self.atom_signals = dict(zip(self._atoms, [None] * len(self._atoms)))
 
     @property
@@ -77,8 +78,11 @@ class EfficientRobustnessMonitor(BaseMonitor):
         if w.ndim == 1:
             w = np.reshape(w, (len(w), 1))
         if len(self.signals) != w.shape[1]:
-            raise ValueError('Expected shape of w to be (n_samples, {}, ...), got {}'
-                             .format(len(self.signals), w.shape))
+            raise ValueError(
+                "Expected shape of w to be (n_samples, {}, ...), got {}".format(
+                    len(self.signals), w.shape
+                )
+            )
         if t is None:
             t = np.arange(w.shape[0])
 
@@ -96,10 +100,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
         w = trace(t)
 
         self.atom_functions = dict(
-            zip(
-                self._atoms,
-                [_get_atom_fn(self.signals, atom) for atom in self._atoms]
-            )
+            zip(self._atoms, [_get_atom_fn(self.signals, atom) for atom in self._atoms])
         )
 
         y_signal = self.robustness_signal(self.spec, w)
@@ -122,7 +123,8 @@ class EfficientRobustnessMonitor(BaseMonitor):
 
         if isinstance(phi, (signal_tl.And, signal_tl.Or)):
             y_signals = np.transpose(
-                np.array([self.robustness_signal(arg, w) for arg in phi.args]))
+                np.array([self.robustness_signal(arg, w) for arg in phi.args])
+            )
             if isinstance(phi, signal_tl.And):
                 return self.compute_and(y_signals)
             if isinstance(phi, signal_tl.Or):
@@ -160,7 +162,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
     def compute_ev(self, y, interval):
         a, b = interval
         if a > 0:
-            y = shift(y, -a, mode='nearest')
+            y = shift(y, -a, mode="nearest")
         if b - a <= 0:
             return y
         elif b - a >= len(y):
@@ -189,7 +191,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
         return z
 
     def _compute_bounded_eventually(self, x, a):
-        z1 = maximum_filter1d(x, a, mode='nearest')
+        z1 = maximum_filter1d(x, a, mode="nearest")
         z2 = shift(x, -a, cval=BOTTOM)
         z3 = self.compute_or_binary(z2, z1)
         z = self.compute_or_binary(x, z3)
@@ -199,7 +201,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
         return -1 * self.compute_ev(-1 * y, interval)
 
     def _compute_bounded_globally(self, x, a):
-        z1 = minimum_filter1d(x, a, mode='nearest')
+        z1 = minimum_filter1d(x, a, mode="nearest")
         z2 = shift(x, -a, cval=TOP)
         z3 = self.compute_and_binary(z2, z1)
         z = self.compute_and_binary(x, z3)
@@ -212,8 +214,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
                 return self._compute_unbounded_until(x, y)
             else:
                 yalw1 = self._compute_bounded_globally(x, a)
-                ytmp = shift(self._compute_unbounded_until(
-                    x, y), -a, mode='nearest')
+                ytmp = shift(self._compute_unbounded_until(x, y), -a, mode="nearest")
                 return self.compute_and_binary(yalw1, ytmp)
         else:
             z2 = self._compute_bounded_eventually(y, b - a)
@@ -221,7 +222,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
             z4 = self.compute_and_binary(z2, z3)
             if a > 0:
                 z1 = self._compute_bounded_globally(x, a)
-                z4 = shift(z4, -a, mode='nearest')
+                z4 = shift(z4, -a, mode="nearest")
                 return self.compute_and_binary(z1, z4)
             else:
                 return self.compute_and_binary(x, z4)
