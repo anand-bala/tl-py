@@ -1,5 +1,6 @@
 import numpy as np
 import sympy
+from numba import jit, njit
 from scipy.ndimage import shift
 from scipy.interpolate import interp1d
 from scipy.ndimage.filters import maximum_filter1d, minimum_filter1d
@@ -65,7 +66,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
     def atoms(self):
         return self._atoms
 
-    def __call__(self, w, t=None, dt=np.inf):
+    def __call__(self, w, t=None, dt=1.0):
         """
         Compute the robustness of the given trace containing the specified signals
 
@@ -144,21 +145,27 @@ class EfficientRobustnessMonitor(BaseMonitor):
 
         return np.full(len(w), fill_value=-np.inf)
 
+    @njit(parallel=True)
     def compute_not(self, y):
         return -1 * y
 
+    @njit(parallel=True)
     def compute_or(self, y_signals):
         return np.amax(y_signals, axis=1)
 
+    @njit(parallel=True)
     def compute_or_binary(self, x, y):
         return np.maximum(x, y)
 
+    @njit(parallel=True)
     def compute_and(self, y_signals):
         return np.amin(y_signals, axis=1)
 
+    @njit(parallel=True)
     def compute_and_binary(self, x, y):
         return np.minimum(x, y)
 
+    @njit(parallel=True)
     def compute_ev(self, y, interval):
         a, b = interval
         if a > 0:
@@ -170,6 +177,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
         else:
             return self._compute_bounded_eventually(y, b - a)
 
+    @njit(parallel=True)
     def _compute_eventually(self, y):
         z = np.full_like(y, BOTTOM)
 
@@ -190,6 +198,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
             z_max = z[i]
         return z
 
+    @njit(parallel=True)
     def _compute_bounded_eventually(self, x, a):
         z1 = maximum_filter1d(x, a, mode="nearest")
         z2 = shift(x, -a, cval=BOTTOM)
@@ -197,9 +206,11 @@ class EfficientRobustnessMonitor(BaseMonitor):
         z = self.compute_or_binary(x, z3)
         return z
 
+    @njit(parallel=True)
     def compute_alw(self, y, interval):
         return -1 * self.compute_ev(-1 * y, interval)
 
+    @njit(parallel=True)
     def _compute_bounded_globally(self, x, a):
         z1 = minimum_filter1d(x, a, mode="nearest")
         z2 = shift(x, -a, cval=TOP)
@@ -207,6 +218,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
         z = self.compute_and_binary(x, z3)
         return z
 
+    @njit()
     def compute_until(self, x, y, interval):
         a, b = interval
         if np.isinf(b):
@@ -227,6 +239,7 @@ class EfficientRobustnessMonitor(BaseMonitor):
             else:
                 return self.compute_and_binary(x, z4)
 
+    @njit()
     def _compute_unbounded_until(self, x, y):
         z = np.full_like(x, BOTTOM)
 
