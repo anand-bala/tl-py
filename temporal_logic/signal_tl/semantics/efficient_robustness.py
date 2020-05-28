@@ -120,147 +120,159 @@ class EfficientRobustnessMonitor(BaseMonitor):
             return np.array([fn(*s) for s in w])
 
         if isinstance(phi, signal_tl.Not):
-            return self.compute_not(self.robustness_signal(phi.args[0], w))
+            return compute_not(self.robustness_signal(phi.args[0], w))
 
         if isinstance(phi, (signal_tl.And, signal_tl.Or)):
             y_signals = np.transpose(
                 np.array([self.robustness_signal(arg, w) for arg in phi.args])
             )
             if isinstance(phi, signal_tl.And):
-                return self.compute_and(y_signals)
+                return compute_and(y_signals)
             if isinstance(phi, signal_tl.Or):
-                return self.compute_or(y_signals)
+                return compute_or(y_signals)
 
         if isinstance(phi, (signal_tl.Eventually, signal_tl.Always)):
             y = self.robustness_signal(phi.args[0], w)
             if isinstance(phi, signal_tl.Eventually):
-                return self.compute_ev(y, phi.interval)
+                return compute_ev(y, phi.interval)
             if isinstance(phi, signal_tl.Always):
-                return self.compute_alw(y, phi.interval)
+                return compute_alw(y, phi.interval)
 
         if isinstance(phi, signal_tl.Until):
             y1 = self.robustness_signal(phi.args[0], w)
             y2 = self.robustness_signal(phi.args[1], w)
-            return self.compute_until(y1, y2, phi.interval)
+            return compute_until(y1, y2, phi.interval)
 
         return np.full(len(w), fill_value=-np.inf)
 
-    @njit(parallel=True)
-    def compute_not(self, y):
-        return -1 * y
 
-    @njit(parallel=True)
-    def compute_or(self, y_signals):
-        return np.amax(y_signals, axis=1)
+@njit(parallel=True)
+def compute_not(y):
+    return -1 * y
 
-    @njit(parallel=True)
-    def compute_or_binary(self, x, y):
-        return np.maximum(x, y)
 
-    @njit(parallel=True)
-    def compute_and(self, y_signals):
-        return np.amin(y_signals, axis=1)
+@njit(parallel=True)
+def compute_or(y_signals):
+    return np.amax(y_signals, axis=1)
 
-    @njit(parallel=True)
-    def compute_and_binary(self, x, y):
-        return np.minimum(x, y)
 
-    @njit(parallel=True)
-    def compute_ev(self, y, interval):
-        a, b = interval
+@njit(parallel=True)
+def compute_or_binary(x, y):
+    return np.maximum(x, y)
+
+
+@njit(parallel=True)
+def compute_and(y_signals):
+    return np.amin(y_signals, axis=1)
+
+
+@njit(parallel=True)
+def compute_and_binary(x, y):
+    return np.minimum(x, y)
+
+
+@njit(parallel=True)
+def compute_ev(y, interval):
+    a, b = interval
+    if a > 0:
+        y = shift(y, -a, mode="nearest")
+    if b - a <= 0:
+        return y
+    elif b - a >= len(y):
+        return _compute_eventually(y)
+    else:
+        return _compute_bounded_eventually(y, b - a)
+
+
+@njit(parallel=True)
+def _compute_eventually(y):
+    z = np.full_like(y, BOTTOM)
+
+    y = np.append(y, y[-1])
+    dy = np.gradient(y)
+
+    z_max = BOTTOM
+    for i in reversed(range(len(y) - 1)):
+        if dy[i] >= 0:
+            z[i] = max(y[i + 1], z_max)
+        elif y[i + 1] >= z_max:
+            z[i] = y[i]
+        elif z_max >= y[i]:
+            z[i] = z_max
+        else:
+            z[i] = y[i]
+            # TODO(anand): There is an intermediate value. But I don't see how this is needed for the discrete case
+        z_max = z[i]
+    return z
+
+
+@njit(parallel=True)
+def _compute_bounded_eventually(x, a):
+    z1 = maximum_filter1d(x, a, mode="nearest")
+    z2 = shift(x, -a, cval=BOTTOM)
+    z3 = compute_or_binary(z2, z1)
+    z = compute_or_binary(x, z3)
+    return z
+
+
+@njit(parallel=True)
+def compute_alw(y, interval):
+    return -1 * compute_ev(-1 * y, interval)
+
+
+@njit(parallel=True)
+def _compute_bounded_globally(x, a):
+    z1 = minimum_filter1d(x, a, mode="nearest")
+    z2 = shift(x, -a, cval=TOP)
+    z3 = compute_and_binary(z2, z1)
+    z = compute_and_binary(x, z3)
+    return z
+
+
+@njit()
+def compute_until(x, y, interval):
+    a, b = interval
+    if np.isinf(b):
+        if a == 0:
+            return _compute_unbounded_until(x, y)
+        else:
+            yalw1 = _compute_bounded_globally(x, a)
+            ytmp = shift(_compute_unbounded_until(x, y), -a, mode="nearest")
+            return compute_and_binary(yalw1, ytmp)
+    else:
+        z2 = _compute_bounded_eventually(y, b - a)
+        z3 = _compute_unbounded_until(x, y)
+        z4 = compute_and_binary(z2, z3)
         if a > 0:
-            y = shift(y, -a, mode="nearest")
-        if b - a <= 0:
-            return y
-        elif b - a >= len(y):
-            return self._compute_eventually(y)
+            z1 = _compute_bounded_globally(x, a)
+            z4 = shift(z4, -a, mode="nearest")
+            return compute_and_binary(z1, z4)
         else:
-            return self._compute_bounded_eventually(y, b - a)
+            return compute_and_binary(x, z4)
 
-    @njit(parallel=True)
-    def _compute_eventually(self, y):
-        z = np.full_like(y, BOTTOM)
 
-        y = np.append(y, y[-1])
-        dy = np.gradient(y)
+@njit()
+def _compute_unbounded_until(x, y):
+    z = np.full_like(x, BOTTOM)
 
-        z_max = BOTTOM
-        for i in reversed(range(len(y) - 1)):
-            if dy[i] >= 0:
-                z[i] = max(y[i + 1], z_max)
-            elif y[i + 1] >= z_max:
-                z[i] = y[i]
-            elif z_max >= y[i]:
-                z[i] = z_max
-            else:
-                z[i] = y[i]
-                # TODO(anand): There is an intermediate value. But I don't see how this is needed for the discrete case
-            z_max = z[i]
-        return z
+    x = np.append(x, x[-1])
+    y = np.append(y, y[-1])
+    dx = np.gradient(x)
 
-    @njit(parallel=True)
-    def _compute_bounded_eventually(self, x, a):
-        z1 = maximum_filter1d(x, a, mode="nearest")
-        z2 = shift(x, -a, cval=BOTTOM)
-        z3 = self.compute_or_binary(z2, z1)
-        z = self.compute_or_binary(x, z3)
-        return z
+    z0 = np.array([BOTTOM] * 2)
 
-    @njit(parallel=True)
-    def compute_alw(self, y, interval):
-        return -1 * self.compute_ev(-1 * y, interval)
-
-    @njit(parallel=True)
-    def _compute_bounded_globally(self, x, a):
-        z1 = minimum_filter1d(x, a, mode="nearest")
-        z2 = shift(x, -a, cval=TOP)
-        z3 = self.compute_and_binary(z2, z1)
-        z = self.compute_and_binary(x, z3)
-        return z
-
-    @njit()
-    def compute_until(self, x, y, interval):
-        a, b = interval
-        if np.isinf(b):
-            if a == 0:
-                return self._compute_unbounded_until(x, y)
-            else:
-                yalw1 = self._compute_bounded_globally(x, a)
-                ytmp = shift(self._compute_unbounded_until(x, y), -a, mode="nearest")
-                return self.compute_and_binary(yalw1, ytmp)
+    for i in reversed(range(len(x) - 1)):
+        seg = [i, i + 1]
+        con = [i, i]
+        if dx[i] <= 0:
+            z1 = _compute_eventually(y[seg])
+            z2 = compute_and_binary(z1, x[seg])
+            z3 = compute_and_binary(x[con + 1], z0)
+            z[i] = compute_or_binary(z2, z3)[0]
         else:
-            z2 = self._compute_bounded_eventually(y, b - a)
-            z3 = self._compute_unbounded_until(x, y)
-            z4 = self.compute_and_binary(z2, z3)
-            if a > 0:
-                z1 = self._compute_bounded_globally(x, a)
-                z4 = shift(z4, -a, mode="nearest")
-                return self.compute_and_binary(z1, z4)
-            else:
-                return self.compute_and_binary(x, z4)
-
-    @njit()
-    def _compute_unbounded_until(self, x, y):
-        z = np.full_like(x, BOTTOM)
-
-        x = np.append(x, x[-1])
-        y = np.append(y, y[-1])
-        dx = np.gradient(x)
-
-        z0 = np.array([BOTTOM] * 2)
-
-        for i in reversed(range(len(x) - 1)):
-            seg = [i, i + 1]
-            con = [i, i]
-            if dx[i] <= 0:
-                z1 = self._compute_eventually(y[seg])
-                z2 = self.compute_and_binary(z1, x[seg])
-                z3 = self.compute_and_binary(x[con + 1], z0)
-                z[i] = self.compute_or_binary(z2, z3)[0]
-            else:
-                z1 = self.compute_and_binary(y[seg], x[seg])
-                z2 = self._compute_eventually(z1)
-                z3 = self.compute_and_binary(x[seg], z0)
-                z[i] = self.compute_or_binary(z2, z3)[0]
-            z0 = z[con]
-        return z
+            z1 = compute_and_binary(y[seg], x[seg])
+            z2 = _compute_eventually(z1)
+            z3 = compute_and_binary(x[seg], z0)
+            z[i] = compute_or_binary(z2, z3)[0]
+        z0 = z[con]
+    return z
